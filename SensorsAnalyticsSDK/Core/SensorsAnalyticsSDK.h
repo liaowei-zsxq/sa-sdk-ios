@@ -19,6 +19,10 @@
 
 #import <Foundation/Foundation.h>
 
+#ifndef SENSORS_ANALYTICS_DISABLE_TRACK_GPS
+#define SENSORS_ANALYTICS_DISABLE_TRACK_GPS 1
+#endif
+
 #import "SensorsAnalyticsSDK+Public.h"
 #import "SASecurityPolicy.h"
 #import "SAConfigOptions.h"
@@ -58,10 +62,11 @@
 #import "SensorsAnalyticsSDK+DeviceOrientation.h"
 #endif
 
+#ifndef SENSORS_ANALYTICS_DISABLE_TRACK_GPS
 #if __has_include("SensorsAnalyticsSDK+Location.h")
 #import "SensorsAnalyticsSDK+Location.h"
 #endif
-
+#endif
 
 //configOptions section
 

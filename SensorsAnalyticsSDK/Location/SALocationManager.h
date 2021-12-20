@@ -18,6 +18,8 @@
 //  limitations under the License.
 //
 
+#ifndef SENSORS_ANALYTICS_DISABLE_TRACK_GPS
+
 #import <CoreLocation/CoreLocation.h>
 #import "SAModuleProtocol.h"
 
@@ -40,3 +42,5 @@ NS_ASSUME_NONNULL_BEGIN
 @end
 
 NS_ASSUME_NONNULL_END
+
+#endif
