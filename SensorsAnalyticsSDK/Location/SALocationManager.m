@@ -1,21 +1,21 @@
 //
-//  SALocationManager.m
-//  SensorsAnalyticsSDK
+// SALocationManager.m
+// SensorsAnalyticsSDK
 //
-//  Created by 向作为 on 2018/5/7.
-//  Copyright © 2015-2020 Sensors Data Co., Ltd. All rights reserved.
+// Created by 向作为 on 2018/5/7.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
-//  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-//  http://www.apache.org/licenses/LICENSE-2.0
+// http://www.apache.org/licenses/LICENSE-2.0
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the License is distributed on an "AS IS" BASIS,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the License for the specific language governing permissions and
-//  limitations under the License.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 
 #ifndef SENSORS_ANALYTICS_DISABLE_TRACK_GPS
@@ -32,6 +32,10 @@
 static NSString * const kSAEventPresetPropertyLatitude = @"$latitude";
 static NSString * const kSAEventPresetPropertyLongitude = @"$longitude";
 static NSString * const kSAEventPresetPropertyCoordinateSystem = @"$geo_coordinate_system";
+
+/* 国际通用的地球坐标系，CLLocationManager 采集定位输出结果是 WGS-84 坐标
+ 国内地图，比如高德、腾讯等，因为国家的保密要求，使用的是偏移后 GCJ-02坐标，戏称“火星坐标”，和 WGS84 存在坐标偏差
+ */
 static NSString * const kSAAppleCoordinateSystem = @"WGS84";
 
 @interface SALocationManager() <CLLocationManagerDelegate>
@@ -70,7 +74,7 @@ static NSString * const kSAAppleCoordinateSystem = @"WGS84";
     [self setupListeners];
 }
 
-- (void)setConfigOptions:(SAConfigOptions *)configOptions {
+- (void)setConfigOptions:(SAConfigOptions *)configOptions NS_EXTENSION_UNAVAILABLE("Location not supported for iOS extensions.") {
     _configOptions = configOptions;
     self.enable = configOptions.enableLocation;
 }
@@ -140,9 +144,16 @@ static NSString * const kSAAppleCoordinateSystem = @"WGS84";
         if (self.isUpdatingLocation) {
             return;
         }
-        //判断当前设备定位服务是否打开
-        if (![CLLocationManager locationServicesEnabled]) {
-            SALogWarn(@"设备尚未打开定位服务");
+        
+        // 判断当前设备定位授权的状态
+        CLAuthorizationStatus status;
+        if (@available(iOS 14.0, *)) {
+            status = self.locationManager.authorizationStatus;
+        } else {
+            status = [CLLocationManager authorizationStatus];
+        }
+        if ((status == kCLAuthorizationStatusDenied) || (status == kCLAuthorizationStatusRestricted)) {
+            SALogWarn(@"location authorization status is denied or restricted");
             return;
         }
 

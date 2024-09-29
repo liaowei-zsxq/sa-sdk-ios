@@ -1,9 +1,9 @@
 //
-//  SAVisualizedDebugLogTracker.m
-//  Pods-SensorsData
+// SAVisualizedDebugLogTracker.m
+// SensorsAnalyticsSDK
 //
-//  Created by 储强盛 on 2021/3/3.
-// Copyright © 2021 Sensors Data Co., Ltd. All rights reserved.
+// Created by 储强盛 on 2021/3/3.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@
 #import "SAVisualizedDebugLogTracker.h"
 #import "SAVisualizedLogger.h"
 #import "SAVisualizedUtils.h"
-#import "SAAutoTrackUtils.h"
 #import "SAViewNode.h"
 #import "SALog+Private.h"
 #import "UIView+SAVisualProperties.h"
@@ -123,7 +122,7 @@
                 NSMutableDictionary *eventLogInfo = [self.debugLogInfos lastObject];
                 eventLogInfo[@"objects"] = nodeMessage;
             } @catch (NSException *exception) {
-                NSString *logMessage = [SAVisualizedLogger buildLoggerMessageWithTitle:@"诊断信息" message:@"log node tree error: %@", exception];
+                NSString *logMessage = [SAVisualizedLogger buildLoggerMessageWithTitle:@"diagnostic information" message:@"log node tree error: %@", exception];
                 SALogWarn(@"%@", logMessage);
             }
         });

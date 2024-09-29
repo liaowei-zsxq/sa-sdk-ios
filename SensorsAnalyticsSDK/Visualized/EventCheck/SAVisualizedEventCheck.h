@@ -3,7 +3,7 @@
 // SensorsAnalyticsSDK
 //
 // Created by 储强盛 on 2021/3/22.
-// Copyright © 2021 Sensors Data Co., Ltd. All rights reserved.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,9 +22,6 @@
 #import "SAVisualPropertiesConfigSources.h"
 
 NS_ASSUME_NONNULL_BEGIN
-
-/// H5 可视化全埋点事件标记
-extern NSString * const kSAWebVisualEventName;
 
 /// 可视化全埋点埋点校验
 @interface SAVisualizedEventCheck : NSObject

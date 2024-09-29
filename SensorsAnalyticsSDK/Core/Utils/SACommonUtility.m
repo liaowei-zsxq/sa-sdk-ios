@@ -1,21 +1,21 @@
 //
-//  SACommonUtility.m
-//  SensorsAnalyticsSDK
+// SACommonUtility.m
+// SensorsAnalyticsSDK
 //
-//  Created by 储强盛 on 2018/7/26.
-//  Copyright © 2015-2020 Sensors Data Co., Ltd. All rights reserved.
+// Created by 储强盛 on 2018/7/26.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
-//  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the License is distributed on an "AS IS" BASIS,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the License for the specific language governing permissions and
-//  limitations under the License.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 
 #if ! __has_feature(objc_arc)
@@ -24,6 +24,7 @@
 
 #import "SACommonUtility.h" 
 #import "SAValidator.h"
+#import "SAIdentifier.h"
 #import <CommonCrypto/CommonDigest.h>
 
 @implementation SACommonUtility
@@ -84,8 +85,20 @@
      在 iOS 中 NSData 的 hash 实现，仅使用数据的前 80 个字节来计算哈希，参考：https://opensource.apple.com/source/CF/CF-635.21/CFData.c
      */
     NSString *base64String = [data base64EncodedStringWithOptions:NSDataBase64EncodingEndLineWithCarriageReturn];
-    NSUInteger hash = [base64String hash];
-    return [NSString stringWithFormat:@"%ld",hash];
+    NSNumber *hashNumber = [NSNumber numberWithUnsignedInteger:[base64String hash]];
+    return [hashNumber stringValue];
 }
 
+#if TARGET_OS_IOS
++ (NSString *)appInstallSource {
+    NSMutableDictionary *sources = [NSMutableDictionary dictionary];
+    sources[@"idfa"] = [SAIdentifier idfa];
+    sources[@"idfv"] = [SAIdentifier idfv];
+    NSMutableArray *result = [NSMutableArray array];
+    for (NSString *key in sources.allKeys) {
+        [result addObject:[NSString stringWithFormat:@"%@=%@", key, sources[key]]];
+    }
+    return [result componentsJoinedByString:@"##"];
+}
+#endif
 @end

@@ -3,7 +3,7 @@
 // SensorsAnalyticsSDK
 //
 // Created by wenquan on 2021/4/2.
-// Copyright © 2021 Sensors Data Co., Ltd. All rights reserved.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,6 +29,8 @@
 #import "SAModuleManager.h"
 #import "SAWeakPropertyContainer.h"
 #include <objc/runtime.h>
+#import "SAUIProperties.h"
+#import "SAReferrerManager.h"
 
 @implementation UIImage (SensorsAnalytics)
 
@@ -42,62 +44,12 @@
 
 @end
 
-@implementation UIView (SensorsAnalytics)
-
-//viewID
-- (NSString *)sensorsAnalyticsViewID {
-    return objc_getAssociatedObject(self, @"sensorsAnalyticsViewID");
-}
-
-- (void)setSensorsAnalyticsViewID:(NSString *)sensorsAnalyticsViewID {
-    objc_setAssociatedObject(self, @"sensorsAnalyticsViewID", sensorsAnalyticsViewID, OBJC_ASSOCIATION_COPY_NONATOMIC);
-}
-
-//ignoreView
-- (BOOL)sensorsAnalyticsIgnoreView {
-    return [objc_getAssociatedObject(self, @"sensorsAnalyticsIgnoreView") boolValue];
-}
-
-- (void)setSensorsAnalyticsIgnoreView:(BOOL)sensorsAnalyticsIgnoreView {
-    objc_setAssociatedObject(self, @"sensorsAnalyticsIgnoreView", [NSNumber numberWithBool:sensorsAnalyticsIgnoreView], OBJC_ASSOCIATION_ASSIGN);
-}
-
-//afterSendAction
-- (BOOL)sensorsAnalyticsAutoTrackAfterSendAction {
-    return [objc_getAssociatedObject(self, @"sensorsAnalyticsAutoTrackAfterSendAction") boolValue];
-}
-
-- (void)setSensorsAnalyticsAutoTrackAfterSendAction:(BOOL)sensorsAnalyticsAutoTrackAfterSendAction {
-    objc_setAssociatedObject(self, @"sensorsAnalyticsAutoTrackAfterSendAction", [NSNumber numberWithBool:sensorsAnalyticsAutoTrackAfterSendAction], OBJC_ASSOCIATION_ASSIGN);
-}
-
-//viewProperty
-- (NSDictionary *)sensorsAnalyticsViewProperties {
-    return objc_getAssociatedObject(self, @"sensorsAnalyticsViewProperties");
-}
-
-- (void)setSensorsAnalyticsViewProperties:(NSDictionary *)sensorsAnalyticsViewProperties {
-    objc_setAssociatedObject(self, @"sensorsAnalyticsViewProperties", sensorsAnalyticsViewProperties, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-}
-
-- (id<SAUIViewAutoTrackDelegate>)sensorsAnalyticsDelegate {
-    SAWeakPropertyContainer *container = objc_getAssociatedObject(self, @"sensorsAnalyticsDelegate");
-    return container.weakProperty;
-}
-
-- (void)setSensorsAnalyticsDelegate:(id<SAUIViewAutoTrackDelegate>)sensorsAnalyticsDelegate {
-    SAWeakPropertyContainer *container = [SAWeakPropertyContainer containerWithWeakProperty:sensorsAnalyticsDelegate];
-    objc_setAssociatedObject(self, @"sensorsAnalyticsDelegate", container, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-}
-
-@end
-
 #pragma mark -
 
 @implementation SensorsAnalyticsSDK (SAAutoTrack)
 
 - (UIViewController *)currentViewController {
-    return [SAAutoTrackUtils currentViewController];
+    return [SAUIProperties currentViewController];
 }
 
 - (BOOL)isAutoTrackEnabled {
@@ -119,8 +71,21 @@
 }
 
 - (void)ignoreAutoTrackViewControllers:(NSArray<NSString *> *)controllers {
-    [SAAutoTrackManager.defaultManager.appClickTracker ignoreAutoTrackViewControllers:controllers];
-    [SAAutoTrackManager.defaultManager.appViewScreenTracker ignoreAutoTrackViewControllers:controllers];
+    if (![controllers isKindOfClass:[NSArray class]]) {
+        return;
+    }
+    NSMutableArray<Class> *tempControllers = [NSMutableArray array];
+    for (NSString *viewControllerName in controllers) {
+        if(![viewControllerName isKindOfClass:[NSString class]]) {
+            break;
+        }
+        Class viewControllerClass = NSClassFromString(viewControllerName);
+        if (viewControllerClass) {
+            [tempControllers addObject:viewControllerClass];
+        }
+    }
+    [SAAutoTrackManager.defaultManager.appClickTracker ignoreAutoTrackViewControllers:tempControllers];
+    [SAAutoTrackManager.defaultManager.appViewScreenTracker ignoreAutoTrackViewControllers:tempControllers];
 }
 
 - (BOOL)isViewControllerIgnored:(UIViewController *)viewController {
@@ -162,6 +127,47 @@
         
         [SAAutoTrackManager.defaultManager updateAutoTrackEventType];
     }
+}
+
+@end
+
+
+@implementation SensorsAnalyticsSDK (SAReferrer)
+
+- (NSString *)getLastScreenUrl {
+    return [SAReferrerManager sharedInstance].referrerURL;
+}
+
+- (NSString *)getCurrentScreenUrl {
+    return [SAReferrerManager sharedInstance].currentScreenUrl;
+}
+
+- (NSDictionary *)getLastScreenTrackProperties {
+    return [SAReferrerManager sharedInstance].referrerProperties;
+}
+
+- (void)clearReferrerWhenAppEnd {
+    [SAReferrerManager sharedInstance].isClearReferrer = YES;
+}
+@end
+
+@implementation SensorsAnalyticsSDK (SAAutoTrackIgnore)
+
+- (void)ignoreAppClickOnViews:(NSArray<Class> *)views {
+    [SAAutoTrackManager.defaultManager.appClickTracker ignoreAppClickOnViews:views];
+}
+
+- (void)ignoreAppClickOnViewControllers:(NSArray<Class> *)viewControllers {
+    [SAAutoTrackManager.defaultManager.appClickTracker ignoreAutoTrackViewControllers:viewControllers];
+}
+
+- (void)ignoreAppViewScreenOnViewControllers:(NSArray<Class> *)viewControllers {
+    [SAAutoTrackManager.defaultManager.appViewScreenTracker ignoreAutoTrackViewControllers:viewControllers];
+}
+
+- (void)ignoreAppClickAndViewScreenOnViewControllers:(NSArray<Class> *)viewControllers {
+    [SAAutoTrackManager.defaultManager.appClickTracker ignoreAutoTrackViewControllers:viewControllers];
+    [SAAutoTrackManager.defaultManager.appViewScreenTracker ignoreAutoTrackViewControllers:viewControllers];
 }
 
 @end

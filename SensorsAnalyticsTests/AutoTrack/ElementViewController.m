@@ -1,9 +1,21 @@
 //
-//  ElementViewController.m
-//  TestSensors
+// ElementViewController.m
+// TestSensors
 //
-//  Created by MC on 2019/5/6.
-//  Copyright © 2019-2020 Sensors Data Co., Ltd. All rights reserved.
+// Created by MC on 2019/5/6.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 
 #import "ElementViewController.h"
@@ -98,13 +110,13 @@
 }
 
 - (void)setupTableView {
-    _tableView = [[UITableView alloc] initWithFrame:CGRectMake(0, CGRectGetMaxY(_scrollView.frame), CGRectGetWidth(self.view.frame), CGRectGetHeight(self.view.frame)/2)];
-    _tableView.dataSource = self;
-    _tableView.delegate = self;
-    _tableView.sensorsAnalyticsDelegate = self;
-    [self.view addSubview:_tableView];
+    self.tableView = [[UITableView alloc] initWithFrame:CGRectMake(0, CGRectGetMaxY(_scrollView.frame), CGRectGetWidth(self.view.frame), CGRectGetHeight(self.view.frame)/2)];
+    self.tableView.dataSource = self;
+    self.tableView.delegate = self;
+    self.tableView.sensorsAnalyticsDelegate = self;
+    [self.view addSubview:self.tableView];
 
-    [_tableView registerClass:[UITableViewCell class] forCellReuseIdentifier:@"UITableViewCell"];
+    [self.tableView registerClass:[UITableViewCell class] forCellReuseIdentifier:@"UITableViewCell"];
 }
 
 - (void)firstAction:(UIButton *)sender {

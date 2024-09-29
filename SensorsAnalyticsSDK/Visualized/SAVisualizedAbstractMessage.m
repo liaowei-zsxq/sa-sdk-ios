@@ -1,21 +1,21 @@
 //
-//  SAVisualizedAbstractMessage.m
-//  SensorsAnalyticsSDK
+// SAVisualizedAbstractMessage.m
+// SensorsAnalyticsSDK
 //
-//  Created by 向作为 on 2018/9/4.
-//  Copyright © 2015-2020 Sensors Data Co., Ltd. All rights reserved.
+// Created by 向作为 on 2018/9/4.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
-//  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the License is distributed on an "AS IS" BASIS,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the License for the specific language governing permissions and
-//  limitations under the License.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 
 #if ! __has_feature(objc_arc)
@@ -27,13 +27,13 @@
 #import "SAVisualizedAbstractMessage.h"
 #import "SensorsAnalyticsSDK.h"
 #import "SALog.h"
-#import "UIViewController+AutoTrack.h"
-#import "SAAutoTrackUtils.h"
+#import "UIViewController+SAAutoTrack.h"
 #import "SAVisualizedObjectSerializerManager.h"
 #import "SAConstants+Private.h"
 #import "SAVisualizedUtils.h"
 #import "SAJSONUtil.h"
 #import "SAVisualizedManager.h"
+#import "SAUIProperties.h"
 
 @interface SAVisualizedAbstractMessage ()
 
@@ -80,37 +80,37 @@
     if (!key) {
         return;
     }
-    _payload[key] = nil;
+    [_payload removeObjectForKey:key];
 }
 
 - (NSDictionary *)payload {
     return [_payload copy];
 }
 
-- (NSData *)JSONDataWithFeatureCode:(NSString *)featureCode {
+- (NSData *)JSONDataWithFeatureCode:(NSString *)featureCode NS_EXTENSION_UNAVAILABLE("VisualizedAutoTrack not supported for iOS extensions.") {
     NSMutableDictionary *jsonObject = [[NSMutableDictionary alloc] init];
     jsonObject[@"type"] = _type;
     jsonObject[@"os"] = @"iOS"; // 操作系统类型
     jsonObject[@"lib"] = @"iOS"; // SDK 类型
-
+    
     SAVisualizedObjectSerializerManager *serializerManager = [SAVisualizedObjectSerializerManager sharedInstance];
     NSString *screenName = nil;
     NSString *pageName = nil;
     NSString *title = nil;
-
+    
     @try {
         // 获取当前页面
         UIViewController *currentViewController = serializerManager.lastViewScreenController;
         if (!currentViewController) {
-            currentViewController = [SAAutoTrackUtils currentViewController];
+            currentViewController = [SAUIProperties currentViewController];
         }
-
+        
         // 解析页面信息
-        NSDictionary *autoTrackScreenProperties = [SAAutoTrackUtils propertiesWithViewController:currentViewController];
+        NSDictionary *autoTrackScreenProperties = [SAUIProperties propertiesWithViewController:currentViewController];
         screenName = autoTrackScreenProperties[kSAEventPropertyScreenName];
         pageName = autoTrackScreenProperties[kSAEventPropertyScreenName];
         title = autoTrackScreenProperties[kSAEventPropertyTitle];
-
+        
         // 获取 RN 页面信息
         NSDictionary <NSString *, NSString *> *RNScreenInfo = [SAVisualizedUtils currentRNScreenVisualizeProperties];
         if (RNScreenInfo[kSAEventPropertyScreenName]) {
@@ -121,16 +121,16 @@
     } @catch (NSException *exception) {
         SALogError(@"%@ error: %@", self, exception);
     }
-
+    
     jsonObject[@"page_name"] = pageName;
     jsonObject[@"screen_name"] = screenName;
     jsonObject[@"title"] = title;
     jsonObject[@"app_version"] = [[NSBundle mainBundle] infoDictionary][@"CFBundleShortVersionString"];
     jsonObject[@"feature_code"] = featureCode;
-    jsonObject[@"is_webview"] = @(serializerManager.isContainWebView);
+    
     // 增加 appId
     jsonObject[@"app_id"] = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleIdentifier"];
-
+    
     // 上传全埋点配置开启状态
     NSMutableArray<NSString *>* autotrackOptions = [NSMutableArray array];
     SensorsAnalyticsAutoTrackEventType eventType = SensorsAnalyticsSDK.sharedInstance.configOptions.autoTrackEventType;
@@ -141,29 +141,40 @@
         [autotrackOptions addObject:kSAEventNameAppViewScreen];
     }
     jsonObject[@"app_autotrack"] = autotrackOptions;
-
+    
     // 自定义属性开关状态
-        jsonObject[@"app_enablevisualizedproperties"] = @(SensorsAnalyticsSDK.sharedInstance.configOptions.enableVisualizedProperties);
-
+    jsonObject[@"app_enablevisualizedproperties"] = @(SAVisualizedManager.defaultManager.configOptions.enableVisualizedProperties);
+    
+    SAVisualizedPageInfo *webPageInfo = [serializerManager queryPageInfoWithType:SAVisualizedPageTypeWeb];
+    SAVisualizedPageInfo *flutterPageInfo = [serializerManager queryPageInfoWithType:SAVisualizedPageTypeFlutter];
+    
+    // 当前为 Flutter 页面
+    if (flutterPageInfo.pageType == SAVisualizedPageTypeFlutter) {
+        jsonObject[@"page_name"] = flutterPageInfo.screenName;
+        jsonObject[@"screen_name"] = flutterPageInfo.screenName;
+        jsonObject[@"title"] = flutterPageInfo.title;
+        jsonObject[@"flutter_lib_version"] = flutterPageInfo.platformSDKLibVersion;
+    }
 
     // 添加前端弹框信息
-    if (serializerManager.alertInfos.count > 0) {
-        jsonObject[@"app_alert_infos"] = [serializerManager.alertInfos copy];
+    if (webPageInfo.alertInfos.count > 0) {
+        jsonObject[@"app_alert_infos"] = [webPageInfo.alertInfos.allValues copy];
     }
     
     // H5 页面信息
-    if (serializerManager.webPageInfo) {
-        SAVisualizedWebPageInfo *webPageInfo = serializerManager.webPageInfo;
+    if (webPageInfo.pageType == SAVisualizedPageTypeWeb) {
+        jsonObject[@"is_webview"] = @(YES);
+
         jsonObject[@"h5_url"] = webPageInfo.url;
         jsonObject[@"h5_title"] = webPageInfo.title;
-        jsonObject[@"web_lib_version"] = webPageInfo.webLibVersion;
+        jsonObject[@"web_lib_version"] = webPageInfo.platformSDKLibVersion;
     }
     
     // SDK 版本号
     jsonObject[@"lib_version"] = SensorsAnalyticsSDK.sharedInstance.libVersion;
     // 可视化全埋点配置版本号
     jsonObject[@"config_version"] = [SAVisualizedManager defaultManager].configSources.configVersion;
-
+    
     if (_payload.count == 0) {
         return [SAJSONUtil dataWithJSONObject:jsonObject];
     }

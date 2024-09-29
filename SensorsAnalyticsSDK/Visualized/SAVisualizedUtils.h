@@ -3,7 +3,7 @@
 // SensorsAnalyticsSDK
 //
 // Created by 储强盛 on 2020/3/3.
-// Copyright © 2020 Sensors Data Co., Ltd. All rights reserved.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -56,7 +56,7 @@ NS_ASSUME_NONNULL_BEGIN
 + (BOOL)isSupportCallJSWithWebView:(WKWebView *)webview;
 
 #pragma mark - RN
-///  获取 RN 当前页面信息
+/// 获取 RN 当前页面信息
 + (NSDictionary <NSString *, NSString *>*)currentRNScreenVisualizeProperties;
 
 /// 是否为 RN 内的原生页面
@@ -72,6 +72,15 @@ NS_ASSUME_NONNULL_BEGIN
 /// 是否为可交互的 RN 元素
 /// @param view 需要判断的 RN 元素
 + (BOOL)isInteractiveEnabledRNView:(UIView *)view;
+
+#pragma mark - Flutter
+/// 解析构造 Flutter 元素
+///
+/// @param flutterView 当前 flutter 容器
+///
+/// @return 构造的子元素集合
++ (NSArray *)analysisFlutterElementWithFlutterView:(UIView *)flutterView;
+
 @end
 
 #pragma mark -
@@ -86,55 +95,13 @@ NS_ASSUME_NONNULL_BEGIN
 + (BOOL)isIgnoredViewPathForViewController:(UIViewController *)viewController;
 
 /**
- 是否忽略当前元素相对路径
-
- @param view 当前元素
- @return 是否忽略
- */
-+ (BOOL)isIgnoredItemPathWithView:(UIView *)view;
-
-/**
- 创建 view 的唯一标识符
-
- @param view 需要创建的对象
- @return 唯一标识符
- */
-+ (nullable NSString *)viewIdentifierForView:(UIView *)view;
-
-/**
-通过响应链找到 对象的点击图路径
-
-@param responder 响应链中的对象，可以是 UIView 或者 UIViewController
-@return 路径
-*/
-+ (NSString *)itemHeatMapPathForResponder:(UIResponder *)responder;
-
-/**
- 找到 view 的路径数组
-
- @param view 需要获取路径的 view
- @return 路径数组
- */
-+ (NSArray<NSString *> *)viewPathsForView:(UIView *)view;
-
-/**
- 获取 view 的路径字符串
-
- @param view 需要获取路径的 view
- @param viewController view 所在的 viewController
- @return 路径字符串
- */
-+ (nullable NSString *)viewPathForView:(UIView *)view atViewController:(UIViewController *)viewController;
-
-/**
 获取 view 的模糊路径
 
 @param view 需要获取路径的 view
 @param viewController view 所在的 viewController
-@param shouldSimilarPath 是否需要取相似路径
 @return 路径字符串
 */
-+ (NSString *)viewSimilarPathForView:(UIView *)view atViewController:(UIViewController *)viewController shouldSimilarPath:(BOOL)shouldSimilarPath;
++ (NSString *)viewSimilarPathForView:(UIView *)view atViewController:(UIViewController *)viewController;
 
 /// 当前 view 所在同类页面序号
 + (NSInteger)pageIndexWithView:(UIView *)view;

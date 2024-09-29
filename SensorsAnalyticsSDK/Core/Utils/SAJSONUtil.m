@@ -1,21 +1,21 @@
 //
-//  SAJSONUtil.m
-//  SensorsAnalyticsSDK
+// SAJSONUtil.m
+// SensorsAnalyticsSDK
 //
-//  Created by 曹犟 on 15/7/7.
-//  Copyright © 2015-2020 Sensors Data Co., Ltd. All rights reserved.
+// Created by 曹犟 on 15/7/7.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
-//  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the License is distributed on an "AS IS" BASIS,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the License for the specific language governing permissions and
-//  limitations under the License.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 
 #if ! __has_feature(objc_arc)
@@ -31,15 +31,15 @@
 @implementation SAJSONUtil
 
 + (NSData *)dataWithJSONObject:(id)obj {
-    id coercedObj = [self JSONSerializableObject:obj];
-
-    if (![NSJSONSerialization isValidJSONObject:coercedObj]) {
-        SALogError(@"%@ obj is not valid JSON: %@", self, coercedObj);
-        return nil;
-    }
-
     NSData *data = nil;
     @try {
+        id coercedObj = [self JSONSerializableObject:obj];
+        
+        if (![NSJSONSerialization isValidJSONObject:coercedObj]) {
+            SALogError(@"%@ obj is not valid JSON: %@", self, coercedObj);
+            return nil;
+        }
+        
         NSError *error = nil;
         data = [NSJSONSerialization dataWithJSONObject:coercedObj options:0 error:&error];
         if (error) {
@@ -146,6 +146,9 @@
 
 + (id)JSONObjectWithData:(NSData *)data options:(NSJSONReadingOptions)options {
     id jsonObject = nil;
+    if (![SAValidator isValidData:data]) {
+        return nil;
+    }
     @try {
         NSError *jsonError = nil;
         jsonObject = [NSJSONSerialization JSONObjectWithData:data options:options error:&jsonError];

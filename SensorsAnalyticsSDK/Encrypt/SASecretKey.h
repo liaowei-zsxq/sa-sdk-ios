@@ -3,7 +3,7 @@
 // SensorsAnalyticsSDK
 //
 // Created by wenquan on 2021/6/26.
-// Copyright © 2021 Sensors Data Co., Ltd. All rights reserved.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@
 NS_ASSUME_NONNULL_BEGIN
 
 /// 密钥信息
-@interface SASecretKey : NSObject <NSCoding>
+@interface SASecretKey : NSObject <NSCoding, NSCopying>
 
 /// 指定构造器，初始化时必须传入四个参数
 /// @param key 非对称加密时使用的公钥值

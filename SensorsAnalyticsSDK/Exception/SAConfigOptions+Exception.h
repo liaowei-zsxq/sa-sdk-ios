@@ -3,7 +3,7 @@
 // SensorsAnalyticsSDK
 //
 // Created by 陈玉国 on 2021/9/10.
-// Copyright © 2021 Sensors Data Co., Ltd. All rights reserved.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ NS_ASSUME_NONNULL_BEGIN
 @interface SAConfigOptions (Exception)
 
 /// 是否自动收集 App Crash 日志，该功能默认是关闭的
-@property (nonatomic, assign) BOOL enableTrackAppCrash API_UNAVAILABLE(macos);
+@property (nonatomic, assign) BOOL enableTrackAppCrash API_UNAVAILABLE(macos) NS_EXTENSION_UNAVAILABLE("Exception not supported for iOS extensions.");
 
 @end
 

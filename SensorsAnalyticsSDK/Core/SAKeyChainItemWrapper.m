@@ -1,22 +1,22 @@
 
 //
-//  SAKeyChainItemWrapper.m
-//  SensorsAnalyticsSDK
+// SAKeyChainItemWrapper.m
+// SensorsAnalyticsSDK
 //
-//  Created by 向作为 on 2018/3/26.
-//  Copyright © 2015-2020 Sensors Data Co., Ltd. All rights reserved.
+// Created by 向作为 on 2018/3/26.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
-//  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the License is distributed on an "AS IS" BASIS,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the License for the specific language governing permissions and
-//  limitations under the License.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 
 #if ! __has_feature(objc_arc)
@@ -33,8 +33,8 @@ NSString * const kSAUdidAccount = @"com.sensorsdata.analytics.udid";
 @implementation SAKeyChainItemWrapper
 + (NSString *)saUdid {
     NSDictionary *result = [self fetchPasswordWithAccount:kSAUdidAccount service:kSAService];
-    NSString *sa_udid =  [result objectForKey:(__bridge id)kSecValueData];
-    return sa_udid;
+    NSString *udid = [result objectForKey:(__bridge id)kSecValueData];
+    return udid;
 }
 
 + (NSString *)saveUdid:(NSString *)udid {
@@ -58,7 +58,7 @@ NSString * const kSAUdidAccount = @"com.sensorsdata.analytics.udid";
     @try {
         NSMutableDictionary *query = [[NSMutableDictionary alloc] init];
         CFTypeRef queryResults = NULL;
-#if TARGET_OS_IOS
+#if TARGET_OS_IOS || TARGET_OS_TV
         CFErrorRef error = NULL;
         SecAccessControlRef secAccessControl =  SecAccessControlCreateWithFlags(kCFAllocatorDefault, kSecAttrAccessibleAfterFirstUnlock, kSecAccessControlUserPresence, &error);
         if (error) {
@@ -126,7 +126,7 @@ NSString * const kSAUdidAccount = @"com.sensorsdata.analytics.udid";
             [query removeObjectForKey:(__bridge id)kSecMatchLimit ];
             [query removeObjectForKey:(__bridge id)kSecReturnAttributes];
             [query removeObjectForKey:(__bridge id)kSecReturnData];
-#if TARGET_OS_IOS
+#if TARGET_OS_IOS || TARGET_OS_TV
             [query removeObjectForKey:(__bridge id)kSecAttrAccessControl];
 #else
             @try {
@@ -151,7 +151,7 @@ NSString * const kSAUdidAccount = @"com.sensorsdata.analytics.udid";
     @try {
         NSMutableDictionary *query = [[NSMutableDictionary alloc] init];
         CFTypeRef queryResults = NULL;
-#if TARGET_OS_IOS
+#if TARGET_OS_IOS || TARGET_OS_TV
         CFErrorRef error = NULL;
         SecAccessControlRef secAccessControl =  SecAccessControlCreateWithFlags(kCFAllocatorDefault, kSecAttrAccessibleAfterFirstUnlock, kSecAccessControlUserPresence, &error);
         if (error) {

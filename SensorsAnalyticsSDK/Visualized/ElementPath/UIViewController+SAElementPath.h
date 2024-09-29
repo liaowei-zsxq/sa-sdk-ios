@@ -3,7 +3,7 @@
 // SensorsAnalyticsSDK
 //
 // Created by 储强盛 on 2021/3/15.
-// Copyright © 2021 Sensors Data Co., Ltd. All rights reserved.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,13 +25,9 @@
 NS_ASSUME_NONNULL_BEGIN
 
 
-@interface UIViewController (SAElementPath)<SAVisualizedViewPathProperty, SAAutoTrackViewPathProperty>
+@interface UIViewController (SAElementPath)<SAVisualizedViewPathProperty>
 
 - (void)sensorsdata_visualize_viewDidAppear:(BOOL)animated;
-
-@end
-
-@interface UIAlertController(SAElementPath)<SAAutoTrackViewPathProperty>
 
 @end
 

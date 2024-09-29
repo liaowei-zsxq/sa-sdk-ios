@@ -3,7 +3,7 @@
 // SensorsAnalyticsSDK
 //
 // Created by 张敏超🍎 on 2020/6/30.
-// Copyright © 2020 Sensors Data Co., Ltd. All rights reserved.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,8 +19,6 @@
 //
 
 #import "SADatabase.h"
-#import "SAEventFlush.h"
-#import "SAEventTracker.h"
 #import "SAConstants.h"
 
 NS_ASSUME_NONNULL_BEGIN
@@ -28,36 +26,6 @@ NS_ASSUME_NONNULL_BEGIN
 @interface SADatabase (SAConfigOptions)
 
 @property (nonatomic, assign, readonly) NSUInteger maxCacheSize;
-
-@end
-
-
-#pragma mark -
-
-@interface SAEventFlush (SAConfigOptions)
-
-@property (nonatomic, readonly) BOOL isDebugMode;
-
-@property (nonatomic, strong, readonly) NSURL *serverURL;
-
-@property (nonatomic, readonly) BOOL flushBeforeEnterBackground;
-
-@property (nonatomic, readonly) BOOL enableEncrypt;
-
-@property (nonatomic, copy, readonly) NSString *cookie;
-
-@end
-
-
-#pragma mark -
-
-@interface SAEventTracker (SAConfigOptions)
-
-@property (nonatomic, readonly) BOOL isDebugMode;
-
-@property (nonatomic, readonly) SensorsAnalyticsNetworkType networkTypePolicy;
-
-@property (nonatomic, readonly) NSInteger flushBulkSize;
 
 @end
 

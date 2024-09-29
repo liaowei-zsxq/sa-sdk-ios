@@ -3,7 +3,7 @@
 // SensorsAnalyticsSDK
 //
 // Created by 张敏超🍎 on 2021/4/27.
-// Copyright © 2021 Sensors Data Co., Ltd. All rights reserved.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -54,6 +54,10 @@ NS_ASSUME_NONNULL_BEGIN
 /// 是否忽略视图的点击事件
 /// @param view UIView
 - (BOOL)isIgnoreEventWithView:(UIView *)view;
+
+/// ignore AppClick on an array of view class names
+/// - Parameter views: view class names
+- (void)ignoreAppClickOnViews:(NSArray<Class>*)views;
 
 @end
 

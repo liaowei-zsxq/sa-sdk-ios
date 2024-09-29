@@ -1,21 +1,21 @@
 //
-//  MessageQueueBySqlite.m
-//  SensorsAnalyticsSDK
+// MessageQueueBySqlite.m
+// SensorsAnalyticsSDK
 //
-//  Created by 曹犟 on 15/7/7.
-//  Copyright © 2015-2020 Sensors Data Co., Ltd. All rights reserved.
+// Created by 曹犟 on 15/7/7.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
-//  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the License is distributed on an "AS IS" BASIS,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the License for the specific language governing permissions and
-//  limitations under the License.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 
 #if ! __has_feature(objc_arc)
@@ -28,9 +28,10 @@
 #import "SAConstants+Private.h"
 #import "SAObject+SAConfigOptions.h"
 
-static NSString *const kDatabaseTableName = @"dataCache";
-static NSString *const kDatabaseColumnStatus = @"status";
-static NSString *const kDatabaseColumnEncrypted = @"encrypted";
+static NSString *const kSADatabaseTableName = @"dataCache";
+static NSString *const kSADatabaseColumnStatus = @"status";
+static NSString *const kSADatabaseColumnEncrypted = @"encrypted";
+static NSString *const kSADatabaseColumnIsInstantEvent = @"is_instant_event";
 
 static const NSUInteger kRemoveFirstRecordsDefaultCount = 100; // 超过最大缓存条数时默认的删除条数
 
@@ -40,6 +41,8 @@ static const NSUInteger kRemoveFirstRecordsDefaultCount = 100; // 超过最大�
 @property (nonatomic, assign) BOOL isOpen;
 @property (nonatomic, assign) BOOL isCreatedTable;
 @property (nonatomic, assign) NSUInteger count;
+
+@property (nonatomic, assign) NSUInteger flushRecordCount;
 
 @end
 
@@ -107,14 +110,20 @@ static const NSUInteger kRemoveFirstRecordsDefaultCount = 100; // 超过最大�
     if (self.isCreatedTable) {
         return YES;
     }
-    NSString *sql = [NSString stringWithFormat:@"create table if not exists %@ (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT, content TEXT)", kDatabaseTableName];
+    NSString *sql = [NSString stringWithFormat:@"create table if not exists %@ (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT, content TEXT)", kSADatabaseTableName];
     if (sqlite3_exec(_database, sql.UTF8String, NULL, NULL, NULL) != SQLITE_OK) {
-        SALogError(@"Create %@ table fail.", kDatabaseTableName);
+        SALogError(@"Create %@ table fail.", kSADatabaseTableName);
         self.isCreatedTable = NO;
         return NO;
     }
-    if (![self createColumn:kDatabaseColumnStatus inTable:kDatabaseTableName]) {
-        SALogError(@"Alert table %@ add %@ fail.", kDatabaseTableName, kDatabaseColumnStatus);
+    if (![self createColumn:kSADatabaseColumnStatus inTable:kSADatabaseTableName]) {
+        SALogError(@"Alert table %@ add %@ fail.", kSADatabaseTableName, kSADatabaseColumnStatus);
+        self.isCreatedTable = NO;
+        return NO;
+    }
+    // create is_instant_event column with integer type, default is 0, if instant event, then is_instant_event will be set to 1
+    if (![self createColumn:kSADatabaseColumnIsInstantEvent inTable:kSADatabaseTableName]) {
+        SALogError(@"Alert table %@ add %@ fail.", kSADatabaseTableName, kSADatabaseColumnIsInstantEvent);
         self.isCreatedTable = NO;
         return NO;
     }
@@ -123,11 +132,11 @@ static const NSUInteger kRemoveFirstRecordsDefaultCount = 100; // 超过最大�
     // 重置所有数据状态，重新上传
     [self resetAllRecordsStatus];
     self.count = [self messagesCount];
-    SALogDebug(@"Create %@ table success, current count is %lu", kDatabaseTableName, self.count);
+    SALogDebug(@"Create %@ table success, current count is %lu", kSADatabaseTableName, self.count);
     return YES;
 }
 
-- (NSArray<SAEventRecord *> *)selectRecords:(NSUInteger)recordSize {
+- (NSArray<SAEventRecord *> *)selectRecords:(NSUInteger)recordSize isInstantEvent:(BOOL)instantEvent {
     NSMutableArray *contentArray = [[NSMutableArray alloc] init];
     if ((self.count == 0) || (recordSize == 0)) {
         return [contentArray copy];
@@ -135,7 +144,7 @@ static const NSUInteger kRemoveFirstRecordsDefaultCount = 100; // 超过最大�
     if (![self databaseCheck]) {
         return [contentArray copy];
     }
-    NSString *query = [NSString stringWithFormat:@"SELECT id,content FROM dataCache WHERE %@ = 0 ORDER BY id ASC LIMIT %lu", kDatabaseColumnStatus, (unsigned long)recordSize];
+    NSString *query = [NSString stringWithFormat:@"SELECT id,content FROM dataCache WHERE %@ = 0 AND %@ = %d ORDER BY id ASC LIMIT %lu", kSADatabaseColumnStatus, kSADatabaseColumnIsInstantEvent, instantEvent ? 1 : 0, (unsigned long)recordSize];
     sqlite3_stmt *stmt = [self dbCacheStmt:query];
     if (!stmt) {
         SALogError(@"Failed to prepare statement, error:%s", sqlite3_errmsg(_database));
@@ -162,12 +171,17 @@ static const NSUInteger kRemoveFirstRecordsDefaultCount = 100; // 超过最大�
 }
 
 - (BOOL)resetAllRecordsStatus {
-    NSString *sql = [NSString stringWithFormat:@"UPDATE %@ SET %@ = %d WHERE %@ = (%d);", kDatabaseTableName, kDatabaseColumnStatus, SAEventRecordStatusNone, kDatabaseColumnStatus, SAEventRecordStatusFlush];
+    NSString *sql = [NSString stringWithFormat:@"UPDATE %@ SET %@ = %d WHERE %@ = (%d);", kSADatabaseTableName, kSADatabaseColumnStatus, SAEventRecordStatusNone, kSADatabaseColumnStatus, SAEventRecordStatusFlush];
     return [self execUpdateSQL:sql];
 }
 
 - (BOOL)updateRecords:(NSArray<NSString *> *)recordIDs status:(SAEventRecordStatus)status {
-    NSString *sql = [NSString stringWithFormat:@"UPDATE %@ SET %@ = %d WHERE id IN (%@);", kDatabaseTableName, kDatabaseColumnStatus, status, [recordIDs componentsJoinedByString:@","]];
+    if (status == SAEventRecordStatusFlush) {
+        self.flushRecordCount += recordIDs.count;
+    } else {
+        self.flushRecordCount -= recordIDs.count;
+    }
+    NSString *sql = [NSString stringWithFormat:@"UPDATE %@ SET %@ = %d WHERE id IN (%@);", kSADatabaseTableName, kSADatabaseColumnStatus, status, [recordIDs componentsJoinedByString:@","]];
     return [self execUpdateSQL:sql];
 }
 
@@ -187,14 +201,23 @@ static const NSUInteger kRemoveFirstRecordsDefaultCount = 100; // 超过最大�
     sqlite3_stmt *stmt;
     if (sqlite3_prepare_v2(_database, sql.UTF8String, -1, &stmt, NULL) != SQLITE_OK) {
         SALogError(@"Prepare update records query failure: %s", sqlite3_errmsg(_database));
+        sqlite3_finalize(stmt);
         return NO;
     }
     if (sqlite3_step(stmt) != SQLITE_DONE) {
         SALogError(@"Failed to update records from database, error: %s", sqlite3_errmsg(_database));
+        sqlite3_finalize(stmt);
         return NO;
     }
     sqlite3_finalize(stmt);
     return YES;
+}
+
+- (NSUInteger)recordCountWithStatus:(SAEventRecordStatus)status {
+    if (status == SAEventRecordStatusFlush) {
+        return self.flushRecordCount;
+    }
+    return self.count - self.flushRecordCount;
 }
 
 - (BOOL)insertRecords:(NSArray<SAEventRecord *> *)records {
@@ -211,7 +234,7 @@ static const NSUInteger kRemoveFirstRecordsDefaultCount = 100; // 超过最大�
         return NO;
     }
 
-    NSString *query = @"INSERT INTO dataCache(type, content) values(?, ?)";
+    NSString *query = [NSString stringWithFormat:@"INSERT INTO dataCache(type, content, %@) values(?, ?, ?)", kSADatabaseColumnIsInstantEvent];
     sqlite3_stmt *insertStatement = [self dbCacheStmt:query];
     if (!insertStatement) {
         return NO;
@@ -224,6 +247,7 @@ static const NSUInteger kRemoveFirstRecordsDefaultCount = 100; // 超过最大�
         }
         sqlite3_bind_text(insertStatement, 1, [record.type UTF8String], -1, SQLITE_TRANSIENT);
         sqlite3_bind_text(insertStatement, 2, [record.content UTF8String], -1, SQLITE_TRANSIENT);
+        sqlite3_bind_int(insertStatement, 3, record.isInstantEvent ? 1 : 0);
         if (sqlite3_step(insertStatement) != SQLITE_DONE) {
             success = NO;
             break;
@@ -248,12 +272,13 @@ static const NSUInteger kRemoveFirstRecordsDefaultCount = 100; // 超过最大�
         return NO;
     }
 
-    NSString *query = @"INSERT INTO dataCache(type, content) values(?, ?)";
+    NSString *query = [NSString stringWithFormat:@"INSERT INTO dataCache(type, content, %@) values(?, ?, ?)", kSADatabaseColumnIsInstantEvent];
     sqlite3_stmt *insertStatement = [self dbCacheStmt:query];
     int rc;
     if (insertStatement) {
         sqlite3_bind_text(insertStatement, 1, [record.type UTF8String], -1, SQLITE_TRANSIENT);
         sqlite3_bind_text(insertStatement, 2, [record.content UTF8String], -1, SQLITE_TRANSIENT);
+        sqlite3_bind_int(insertStatement, 3, record.isInstantEvent ? 1 : 0);
         rc = sqlite3_step(insertStatement);
         if (rc != SQLITE_DONE) {
             SALogError(@"insert into dataCache table of sqlite fail, rc is %d", rc);
@@ -280,6 +305,7 @@ static const NSUInteger kRemoveFirstRecordsDefaultCount = 100; // 超过最大�
 
     if (sqlite3_prepare_v2(_database, query.UTF8String, -1, &stmt, NULL) != SQLITE_OK) {
         SALogError(@"Prepare delete records query failure: %s", sqlite3_errmsg(_database));
+        sqlite3_finalize(stmt);
         return NO;
     }
     BOOL success = YES;
@@ -289,6 +315,7 @@ static const NSUInteger kRemoveFirstRecordsDefaultCount = 100; // 超过最大�
     }
     sqlite3_finalize(stmt);
     self.count = [self messagesCount];
+    self.flushRecordCount -= recordIDs.count;
     return success;
 }
 
@@ -305,6 +332,7 @@ static const NSUInteger kRemoveFirstRecordsDefaultCount = 100; // 超过最大�
 
     if (sqlite3_prepare_v2(_database, query.UTF8String, -1, &stmt, NULL) != SQLITE_OK) {
         SALogError(@"Prepare delete records query failure: %s", sqlite3_errmsg(_database));
+        sqlite3_finalize(stmt);
         return NO;
     }
     if (sqlite3_step(stmt) != SQLITE_DONE) {
@@ -363,6 +391,7 @@ static const NSUInteger kRemoveFirstRecordsDefaultCount = 100; // 超过最大�
         int result = sqlite3_prepare_v2(_database, sql.UTF8String, -1, &stmt, NULL);
         if (result != SQLITE_OK) {
             SALogError(@"sqlite stmt prepare error (%d): %s", result, sqlite3_errmsg(_database));
+            sqlite3_finalize(stmt);
             return NULL;
         }
         CFDictionarySetValue(_dbStmtCache, (__bridge const void *)(sql), stmt);
@@ -385,6 +414,7 @@ static const NSUInteger kRemoveFirstRecordsDefaultCount = 100; // 超过最大�
     sqlite3_stmt *stmt;
     if (sqlite3_prepare_v2(_database, query.UTF8String, -1, &stmt, NULL) != SQLITE_OK) {
         SALogError(@"Prepare PRAGMA table_info query failure: %s", sqlite3_errmsg(_database));
+        sqlite3_finalize(stmt);
         return columns;
     }
 
@@ -402,8 +432,9 @@ static const NSUInteger kRemoveFirstRecordsDefaultCount = 100; // 超过最大�
     return columns;
 }
 
+//默认添加一个整型的默认值为 0 的一列
 - (BOOL)createColumn:(NSString *)columnName inTable:(NSString *)tableName {
-    if ([self columnExists:kDatabaseColumnStatus inTable:kDatabaseTableName]) {
+    if ([self columnExists:columnName inTable:tableName]) {
         return YES;
     }
 
@@ -412,10 +443,12 @@ static const NSUInteger kRemoveFirstRecordsDefaultCount = 100; // 超过最大�
 
     if (sqlite3_prepare_v2(_database, query.UTF8String, -1, &stmt, NULL) != SQLITE_OK) {
         SALogError(@"Prepare create column query failure: %s", sqlite3_errmsg(_database));
+        sqlite3_finalize(stmt);
         return NO;
     }
     if (sqlite3_step(stmt) != SQLITE_DONE) {
         SALogError(@"Failed to create column, error: %s", sqlite3_errmsg(_database));
+        sqlite3_finalize(stmt);
         return NO;
     }
     sqlite3_finalize(stmt);

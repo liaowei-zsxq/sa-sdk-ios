@@ -3,7 +3,7 @@
 // SensorsAnalyticsSDK
 //
 // Created by 陈玉国 on 2021/1/6.
-// Copyright © 2021 Sensors Data Co., Ltd. All rights reserved.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@
 //
 
 #import "SADelegateProxy.h"
-#import "NSObject+DelegateProxy.h"
+#import "NSObject+SADelegateProxy.h"
 
 NS_ASSUME_NONNULL_BEGIN
 

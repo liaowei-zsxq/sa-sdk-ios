@@ -1,21 +1,21 @@
 //
-//  SAVisualizedConnection.m,
-//  SensorsAnalyticsSDK
+// SAVisualizedConnection.m,
+// SensorsAnalyticsSDK
 //
-//  Created by 向作为 on 2018/9/4.
-//  Copyright © 2015-2020 Sensors Data Co., Ltd. All rights reserved.
+// Created by 向作为 on 2018/9/4.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
-//  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the License is distributed on an "AS IS" BASIS,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the License for the specific language governing permissions and
-//  limitations under the License.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 
 #if ! __has_feature(objc_arc)
@@ -33,6 +33,8 @@
 #import "SAConstants+Private.h"
 #import "SAVisualizedManager.h"
 #import "SAVisualizedLogger.h"
+#import "SAFlutterPluginBridge.h"
+#import "SAVisualizedResources.h"
 
 @interface SAVisualizedConnection ()
 @property (nonatomic, strong) NSTimer *timer;
@@ -69,7 +71,7 @@
     [notificationCenter addObserver:self selector:@selector(applicationDidBecomeActive) name:UIApplicationDidBecomeActiveNotification object:nil];
     [notificationCenter addObserver:self selector:@selector(applicationDidEnterBackground) name:UIApplicationDidEnterBackgroundNotification object:nil];
 
-    [notificationCenter addObserver:self selector:@selector(receiveVisualizedMessageFromH5:) name:SA_VISUALIZED_H5_MESSAGE_NOTIFICATION object:nil];
+    [notificationCenter addObserver:self selector:@selector(receiveVisualizedMessageFromH5:) name:kSAVisualizedMessageFromH5Notification object:nil];
 }
 
 #pragma mark notification Action
@@ -85,6 +87,7 @@
     [self stopSendMessageTimer];
 }
 
+// App 内嵌 H5 的页面信息，包括页面元素、提示弹框、页面信息
 - (void)receiveVisualizedMessageFromH5:(NSNotification *)notification {
     WKScriptMessage *message = notification.object;
     WKWebView *webView = message.webView;
@@ -102,23 +105,33 @@
     [[SAVisualizedObjectSerializerManager sharedInstance] saveVisualizedWebPageInfoWithWebView:webView webPageInfo:messageDic];
 }
 
+
 /// 开始计时
 - (void)startSendMessageTimer {
     _commandQueue.suspended = NO;
-    if (self.timer && [self.timer isValid]) {
-        // 恢复
-        [self.timer setFireDate:[NSDate date]];
+    if (!self.timer || ![self.timer isValid]) {
         return;
     }
+    // 恢复计时器
+    [self.timer setFireDate:[NSDate date]];
+
+    // 通知外部，开始可视化全埋点连接
+    [SAFlutterPluginBridge.sharedInstance changeVisualConnectionStatus:YES];
 }
 
 /// 暂停计时
 - (void)stopSendMessageTimer {
     _commandQueue.suspended = YES;
-    if (self.timer) {
-        // 暂停计时
-        [self.timer setFireDate:[NSDate distantFuture]];
+    
+    if (!self.timer || ![self.timer isValid]) {
+        return;
     }
+
+    // 暂停计时
+    [self.timer setFireDate:[NSDate distantFuture]];
+
+    // 通知外部，已断开可视化全埋点连接
+    [SAFlutterPluginBridge.sharedInstance changeVisualConnectionStatus:NO];
 }
 
 #pragma mark action
@@ -134,7 +147,6 @@
     }
 
     // 清空缓存的配置数据
-    [[SAVisualizedObjectSerializerManager sharedInstance] resetObjectSerializer];
     [[SAVisualizedObjectSerializerManager sharedInstance] cleanVisualizedWebPageInfoCache];
 
     // 关闭埋点校验
@@ -142,10 +154,15 @@
 
     // 关闭诊断信息收集
     [SAVisualizedManager.defaultManager.visualPropertiesTracker enableCollectDebugLog:NO];
+
+    // 通知外部，已断开可视化全埋点连接
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [SAFlutterPluginBridge.sharedInstance changeVisualConnectionStatus:NO];
+    });
 }
 
 - (BOOL)isVisualizedConnecting {
-    return _timer && _timer.valid;
+    return self.timer && self.timer.isValid;
 }
 
 - (void)dealloc {
@@ -182,12 +199,12 @@
 
         [task resume];
     } else {
-        SALogWarn(@"Not sending message as we are not connected: %@", [message debugDescription]);
+        SALogWarn(@"No message will be sent because there is no connection: %@", [message debugDescription]);
     }
 }
 
 /// 解析调试信息
-- (void)analysisDebugMessage:(NSDictionary *)message {
+- (void)analysisDebugMessage:(NSDictionary *)message NS_EXTENSION_UNAVAILABLE("VisualizedAutoTrack not supported for iOS extensions.") {
     // 关闭自定义属性也不再处理调试信息
     if (message.count == 0 || !SAVisualizedManager.defaultManager.configOptions.enableVisualizedProperties) {
         return;
@@ -198,12 +215,12 @@
     // 是否关闭自定义属性
     BOOL disableConfig = [message[@"visualized_config_disabled"] boolValue];
     if (disableConfig) {
-        NSString *logMessage = [SAVisualizedLogger buildLoggerMessageWithTitle:@"开关控制" message:@"轮询接口返回，运维配置，关闭自定义属性"];
+        NSString *logMessage = [SAVisualizedLogger buildLoggerMessageWithTitle:@"switch control" message:@"the result returned by the polling interface, close custom properties through operations configuration"];
         SALogDebug(@"%@", logMessage);
 
         [SAVisualizedManager.defaultManager.configSources setupConfigWithDictionary:nil disableConfig:YES];
     } else if (configDic.count > 0) {
-        NSString *logMessage = [SAVisualizedLogger buildLoggerMessageWithTitle:@"获取配置" message:@"轮询接口更新可视化全埋点配置，%@", configDic];
+        NSString *logMessage = [SAVisualizedLogger buildLoggerMessageWithTitle:@"get configuration" message:@"polling interface update visualized configuration, %@", configDic];
         SALogInfo(@"%@", logMessage);
 
         [SAVisualizedManager.defaultManager.configSources setupConfigWithDictionary:configDic disableConfig:NO];
@@ -253,6 +270,9 @@
                                                 selector:@selector(handleMessage)
                                                 userInfo:nil
                                                  repeats:YES];
+
+    // 发送通知，通知 flutter 已进入可视化全埋点扫码模式
+    [SAFlutterPluginBridge.sharedInstance changeVisualConnectionStatus:YES];
 }
 
 - (void)handleMessage {
@@ -265,11 +285,7 @@
 }
 
 - (void)startConnectionWithFeatureCode:(NSString *)featureCode url:(NSString *)urlStr {
-    NSBundle *sensorsBundle = [NSBundle bundleWithPath:[[NSBundle bundleForClass:[SensorsAnalyticsSDK class]] pathForResource:@"SensorsAnalyticsSDK" ofType:@"bundle"]];
-
-    NSString *jsonPath = [sensorsBundle pathForResource:@"sa_visualized_path.json" ofType:nil];
-    NSData *jsonData = [NSData dataWithContentsOfFile:jsonPath];
-    NSString *jsonString = [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
+    NSString *jsonString = [SAVisualizedResources visualizedPath];
     _commandQueue.suspended = NO;
     self->_connected = YES;
     [self startVisualizedTimer:jsonString featureCode:featureCode postURL:urlStr];

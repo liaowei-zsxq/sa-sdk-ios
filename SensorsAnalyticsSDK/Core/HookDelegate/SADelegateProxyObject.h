@@ -3,7 +3,7 @@
 // SensorsAnalyticsSDK
 //
 // Created by yuqiang on 2021/11/12.
-// Copyright © 2021 Sensors Data Co., Ltd. All rights reserved.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, strong) Class delegateProxy;
 
 /// 当前代理对象已 hook 的方法集合
-@property (nonatomic, copy) NSMutableSet *selectors;
+@property (nonatomic, strong) NSMutableSet *selectors;
 
 - (instancetype)initWithDelegate:(id)delegate proxy:(id)proxy;
 

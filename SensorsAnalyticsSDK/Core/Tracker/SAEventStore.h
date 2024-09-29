@@ -3,7 +3,7 @@
 // SensorsAnalyticsSDK
 //
 // Created by 张敏超🍎 on 2020/6/18.
-// Copyright © 2020 Sensors Data Co., Ltd. All rights reserved.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,14 +18,14 @@
 // limitations under the License.
 //
 
-#if ! __has_feature(objc_arc)
-#error This file must be compiled with ARC. Either turn on ARC for the project or use -fobjc-arc flag on this file.
-#endif
-
 #import <Foundation/Foundation.h>
 #import "SAEventRecord.h"
 
 NS_ASSUME_NONNULL_BEGIN
+
+/// 默认存储表名和文件名
+extern NSString * const kSADatabaseNameKey;
+extern NSString * const kSADatabaseDefaultFileName;
 
 @interface SAEventStore : NSObject
 
@@ -43,11 +43,12 @@ NS_ASSUME_NONNULL_BEGIN
  *
  *  @return 初始化的结果
  */
-- (instancetype)initWithFilePath:(NSString *)filePath;
++ (instancetype)eventStoreWithFilePath:(NSString *)filePath;
 
 /// fetch first records with a certain size
 /// @param recordSize record size
-- (NSArray<SAEventRecord *> *)selectRecords:(NSUInteger)recordSize;
+/// @param instantEvent instant event or not
+- (NSArray<SAEventRecord *> *)selectRecords:(NSUInteger)recordSize isInstantEvent:(BOOL)instantEvent;
 
 
 /// insert single record
@@ -65,6 +66,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 /// delete all records from database
 - (BOOL)deleteAllRecords;
+
+- (NSUInteger)recordCountWithStatus:(SAEventRecordStatus)status;
 
 @end
 

@@ -3,7 +3,7 @@
 // SensorsAnalyticsSDK
 //
 // Created by 张敏超🍎 on 2020/11/25.
-// Copyright © 2020 Sensors Data Co., Ltd. All rights reserved.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@
 #import "SAValidator.h"
 #import "SAURLUtils.h"
 #import "SAAlertController.h"
-#import "SAFileStore.h"
+#import "SAStoreManager.h"
 #import "SAJSONUtil.h"
 #import "SAGzipUtility.h"
 #import "SALog.h"
@@ -35,12 +35,27 @@
 #import "SAConfigOptions+Encrypt.h"
 #import "SASecretKey.h"
 #import "SASecretKeyFactory.h"
+#import "SAConstants+Private.h"
+#import "SAConfigOptions+EncryptPrivate.h"
+#import "SAFlushJSONInterceptor.h"
+#import "SAFlushHTTPBodyInterceptor.h"
+#import "SASwizzle.h"
+#import "SAFlushJSONInterceptor+Encrypt.h"
+#import "SAFlushHTTPBodyInterceptor+Encrypt.h"
+#import "SAAESEventEncryptor.h"
+#import "SAConfigOptions+EncryptPrivate.h"
+
+#if __has_include("SensorsAnalyticsSDK+DeepLink.h")
+#import "SensorsAnalyticsSDK+DeepLink.h"
+#import "SAAdvertisingConfig+Private.h"
+#endif
 
 static NSString * const kSAEncryptSecretKey = @"SAEncryptSecretKey";
 
 @interface SAConfigOptions (Private)
 
 @property (atomic, strong, readonly) NSMutableArray *encryptors;
+@property (nonatomic, strong) id<SAEventEncryptProtocol> eventEncryptor;
 
 @end
 
@@ -58,6 +73,12 @@ static NSString * const kSAEncryptSecretKey = @"SAEncryptSecretKey";
 /// 非对称加密器的公钥（RSA/ECC 的公钥）
 @property (nonatomic, strong) SASecretKey *secretKey;
 
+/// 防止 RSA 加密时卡住主线程, 所以新建串行队列处理
+@property (nonatomic, strong) dispatch_queue_t encryptQueue;
+
+//local event encryptor using AES 128
+@property (nonatomic, strong) SAAESEventEncryptor *eventEncryptor;
+
 @end
 
 @implementation SAEncryptManager
@@ -67,6 +88,7 @@ static NSString * const kSAEncryptSecretKey = @"SAEncryptSecretKey";
     static SAEncryptManager *manager = nil;
     dispatch_once(&onceToken, ^{
         manager = [[SAEncryptManager alloc] init];
+        manager.encryptQueue = dispatch_queue_create("cn.sensorsdata.SAEncryptManagerEncryptQueue", DISPATCH_QUEUE_SERIAL);
     });
     return manager;
 }
@@ -77,14 +99,19 @@ static NSString * const kSAEncryptSecretKey = @"SAEncryptSecretKey";
     _enable = enable;
 
     if (enable) {
-        [self updateEncryptor];
+        [self swizzleFlushInteceptorMethods];
+        dispatch_async(self.encryptQueue, ^{
+            [self updateEncryptor];
+        });
     }
 }
 
-- (void)setConfigOptions:(SAConfigOptions *)configOptions {
+- (void)setConfigOptions:(SAConfigOptions *)configOptions NS_EXTENSION_UNAVAILABLE("Encrypt not supported for iOS extensions.") {
+    //register event encryptor
+    [configOptions registerEventEncryptor:[[SAAESEventEncryptor alloc] init]];
     _configOptions = configOptions;
     if (configOptions.enableEncrypt) {
-        NSAssert((configOptions.saveSecretKey && configOptions.loadSecretKey) || (!configOptions.saveSecretKey && !configOptions.loadSecretKey), @"存储公钥和获取公钥的回调需要全部实现或者全部不实现。");
+        NSAssert((configOptions.saveSecretKey && configOptions.loadSecretKey) || (!configOptions.saveSecretKey && !configOptions.loadSecretKey), @"Block saveSecretKey and loadSecretKey need to be fully implemented or not implemented at all.");
     }
 
     NSMutableArray *encryptors = [NSMutableArray array];
@@ -96,7 +123,14 @@ static NSString * const kSAEncryptSecretKey = @"SAEncryptSecretKey";
     [encryptors addObject:[[SARSAPluginEncryptor alloc] init]];
     [encryptors addObjectsFromArray:configOptions.encryptors];
     self.encryptors = encryptors;
-    self.enable = configOptions.enableEncrypt;
+    self.eventEncryptor = configOptions.eventEncryptor;
+#if __has_include("SensorsAnalyticsSDK+DeepLink.h")
+    self.enable = configOptions.enableEncrypt || configOptions.enableTransportEncrypt || (configOptions.advertisingConfig.adsSecretKey != nil);
+#else
+    self.enable = configOptions.enableEncrypt || configOptions.enableTransportEncrypt;
+#endif
+
+    [self loadLocalRemoteConfig];
 }
 
 #pragma mark - SAOpenURLProtocol
@@ -106,7 +140,7 @@ static NSString * const kSAEncryptSecretKey = @"SAEncryptSecretKey";
 }
 
 - (BOOL)handleURL:(nonnull NSURL *)url {
-    NSString *message = @"当前 App 未开启加密，请开启加密后再试";
+    NSString *message = SALocalizedString(@"SAEncryptNotEnabled");
 
     if (self.enable) {
         NSDictionary *paramDic = [SAURLUtils queryItemsWithURL:url];
@@ -130,22 +164,22 @@ static NSString * const kSAEncryptSecretKey = @"SAEncryptSecretKey";
                 [secretKey.symmetricEncryptType isEqualToString:symmetricType];
                 // 这里为了兼容老版本 SA 未下发秘钥类型，当某一个类型不存在时即当做老版本 SA 处理
                 if (!asymmetricType || !symmetricType || typeMatched) {
-                    message = @"密钥验证通过，所选密钥与 App 端密钥相同";
+                    message = SALocalizedString(@"SAEncryptKeyVerificationPassed");
                 } else {
-                    message = [NSString stringWithFormat:@"密钥验证不通过，所选密钥与 App 端密钥不相同。所选密钥对称算法类型:%@，非对称算法类型:%@, App 端对称算法类型:%@, 非对称算法类型:%@", symmetricType, asymmetricType, secretKey.symmetricEncryptType, secretKey.asymmetricEncryptType];
+                    message = [NSString stringWithFormat:SALocalizedString(@"SAEncryptKeyTypeVerificationFailed"), symmetricType, asymmetricType, secretKey.symmetricEncryptType, secretKey.asymmetricEncryptType];
                 }
             } else if (![SAValidator isValidString:currentKey]) {
-                message = @"密钥验证不通过，App 端密钥为空";
+                message = SALocalizedString(@"SAEncryptAppKeyEmpty");
             } else {
-                message = [NSString stringWithFormat:@"密钥验证不通过，所选密钥与 App 端密钥不相同。所选密钥版本:%@，App 端密钥版本:%@", urlVersion, loadVersion];
+                message = [NSString stringWithFormat:SALocalizedString(@"SAEncryptKeyVersionVerificationFailed"), urlVersion, loadVersion];
             }
         } else {
-            message = @"密钥验证不通过，所选密钥无效";
+            message = SALocalizedString(@"SAEncryptSelectedKeyInvalid");
         }
     }
 
     SAAlertController *alertController = [[SAAlertController alloc] initWithTitle:nil message:message preferredStyle:SAAlertControllerStyleAlert];
-    [alertController addActionWithTitle:@"确认" style:SAAlertActionStyleDefault handler:nil];
+    [alertController addActionWithTitle:SALocalizedString(@"SAAlertOK") style:SAAlertActionStyleDefault handler:nil];
     [alertController show];
     return YES;
 }
@@ -155,6 +189,43 @@ static NSString * const kSAEncryptSecretKey = @"SAEncryptSecretKey";
     // 当可以获取到秘钥时，不需要强制性触发远程配置请求秘钥
     SASecretKey *sccretKey = [self loadCurrentSecretKey];
     return (sccretKey.key.length > 0);
+}
+
+- (NSDictionary *)encryptEvent:(NSDictionary *)event withKey:(SASecretKey *)key {
+    NSDictionary *encryptedEvent = nil;
+    id encryptor = [self encryptorWithSecretKey:key];
+    if (!encryptor) {
+        return encryptedEvent;
+    }
+    @try {
+        if (!event) {
+            return encryptedEvent;
+        }
+        NSString *encryptSymmetricKey = [encryptor encryptSymmetricKeyWithPublicKey:key.key];
+        if (!encryptSymmetricKey) {
+            return encryptedEvent;
+        }
+        // 使用 gzip 进行压缩
+        NSData *jsonData = [SAJSONUtil dataWithJSONObject:event];
+        NSData *zippedData = [SAGzipUtility gzipData:jsonData];
+
+        // 加密数据
+        NSString *encryptedString =  [encryptor encryptEvent:zippedData];
+        if (![SAValidator isValidString:encryptedString]) {
+            return encryptedEvent;
+        }
+
+        // 封装加密的数据结构
+        NSMutableDictionary *secretObj = [NSMutableDictionary dictionary];
+        secretObj[kSAEncryptRecordKeyPKV] = @(key.version);
+        secretObj[kSAEncryptRecordKeyEKey] = encryptSymmetricKey;
+        secretObj[kSAEncryptRecordKeyPayload] = encryptedString;
+        encryptedEvent = [NSDictionary dictionaryWithDictionary:secretObj];
+    } @catch (NSException *exception) {
+        SALogError(@"%@ error: %@", self, exception);
+    } @finally {
+        return encryptedEvent;
+    }
 }
 
 - (NSDictionary *)encryptJSONObject:(id)obj {
@@ -186,14 +257,27 @@ static NSString * const kSAEncryptSecretKey = @"SAEncryptSecretKey";
 
         // 封装加密的数据结构
         NSMutableDictionary *secretObj = [NSMutableDictionary dictionary];
-        secretObj[@"pkv"] = @(self.secretKey.version);
-        secretObj[@"ekey"] = self.encryptedSymmetricKey;
-        secretObj[@"payload"] = encryptedString;
+        secretObj[kSAEncryptRecordKeyPKV] = @(self.secretKey.version);
+        secretObj[kSAEncryptRecordKeyEKey] = self.encryptedSymmetricKey;
+        secretObj[kSAEncryptRecordKeyPayload] = encryptedString;
         return [NSDictionary dictionaryWithDictionary:secretObj];
     } @catch (NSException *exception) {
         SALogError(@"%@ error: %@", self, exception);
         return nil;
     }
+}
+
+- (NSDictionary *)encryptEventRecord:(NSDictionary *)eventRecord {
+    NSData *jsonData = [SAJSONUtil dataWithJSONObject:eventRecord];
+    NSMutableDictionary *eventJson = [NSMutableDictionary dictionary];
+    eventJson[kSAEncryptRecordKeyPayload] = [self.eventEncryptor encryptEventRecord:jsonData];
+    return [eventJson copy];
+}
+
+- (NSDictionary *)decryptEventRecord:(NSDictionary *)eventRecord {
+    NSString *encryptedEvent = eventRecord[kSAEncryptRecordKeyPayload];
+    NSData *eventData = [self.eventEncryptor decryptEventRecord:encryptedEvent];
+    return [SAJSONUtil JSONObjectWithData:eventData];
 }
 
 - (BOOL)encryptSymmetricKey {
@@ -207,15 +291,22 @@ static NSString * const kSAEncryptSecretKey = @"SAEncryptSecretKey";
 
 #pragma mark - handle remote config for secret key
 - (void)handleEncryptWithConfig:(NSDictionary *)encryptConfig {
+    dispatch_async(self.encryptQueue, ^{
+        [self updateEncryptorWithConfig:encryptConfig];
+    });
+}
+
+- (void)updateEncryptorWithConfig:(NSDictionary *)encryptConfig {
     if (!encryptConfig) {
         return;
     }
+    [self enableFlushEncryptWithRemoteConfig:encryptConfig];
 
     // 加密插件化 2.0 新增字段，下发秘钥信息不可用时，继续走 1.0 逻辑
-    SASecretKey *secretKey = [SASecretKeyFactory createSecretKeyByVersion2:encryptConfig[@"key_v2"]];
+    SASecretKey *secretKey = [SASecretKeyFactory createSecretKeyByVersion2:encryptConfig[kSARemoteConfigConfigsKey][@"key_v2"]];
     if (![self encryptorWithSecretKey:secretKey]) {
         // 加密插件化 1.0 秘钥信息
-        secretKey = [SASecretKeyFactory createSecretKeyByVersion1:encryptConfig[@"key"]];
+        secretKey = [SASecretKeyFactory createSecretKeyByVersion1:encryptConfig[kSARemoteConfigConfigsKey][@"key"]];
     }
 
     //当前秘钥没有对应的加密器
@@ -282,7 +373,7 @@ static NSString * const kSAEncryptSecretKey = @"SAEncryptSecretKey";
 - (id<SAEncryptProtocol>)filterEncrptor:(SASecretKey *)secretKey {
     id<SAEncryptProtocol> encryptor = [self encryptorWithSecretKey:secretKey];
     if (!encryptor) {
-        NSString *format = @"\n您使用了 [%@]  密钥，但是并没有注册对应加密插件。\n • 若您使用的是 EC+AES 或 SM2+SM4 加密方式，请检查是否正确集成 'SensorsAnalyticsEncrypt' 模块，且已注册对应加密插件。\n";
+        NSString *format = @"\n You used a [%@] key, but the corresponding encryption plugin is not registered. \n • If you are using EC+AES or SM2+SM4 encryption, please check that the 'SensorsAnalyticsEncrypt' module is correctly integrated and that the corresponding encryption plugin is registered. \n";
         NSString *type = [NSString stringWithFormat:@"%@+%@", secretKey.asymmetricEncryptType, secretKey.symmetricEncryptType];
         NSString *message = [NSString stringWithFormat:format, type];
         NSAssert(NO, message);
@@ -319,13 +410,13 @@ static NSString * const kSAEncryptSecretKey = @"SAEncryptSecretKey";
         // 通过用户的回调保存公钥
         saveSecretKey(secretKey);
 
-        [SAFileStore archiveWithFileName:kSAEncryptSecretKey value:nil];
+        [[SAStoreManager sharedInstance] removeObjectForKey:kSAEncryptSecretKey];
 
         SALogDebug(@"Save secret key by saveSecretKey callback, pkv : %ld, public_key : %@", (long)secretKey.version, secretKey.key);
     } else {
         // 存储到本地
         NSData *secretKeyData = [NSKeyedArchiver archivedDataWithRootObject:secretKey];
-        [SAFileStore archiveWithFileName:kSAEncryptSecretKey value:secretKeyData];
+        [[SAStoreManager sharedInstance] setObject:secretKeyData forKey:kSAEncryptSecretKey];
 
         SALogDebug(@"Save secret key by localSecretKey, pkv : %ld, public_key : %@", (long)secretKey.version, secretKey.key);
     }
@@ -346,7 +437,7 @@ static NSString * const kSAEncryptSecretKey = @"SAEncryptSecretKey";
         }
     } else {
         // 通过本地获取公钥
-        id secretKeyData = [SAFileStore unarchiveWithFileName:kSAEncryptSecretKey];
+        id secretKeyData = [[SAStoreManager sharedInstance] objectForKey:kSAEncryptSecretKey];
         if ([SAValidator isValidData:secretKeyData]) {
             secretKey = [NSKeyedUnarchiver unarchiveObjectWithData:secretKeyData];
         }
@@ -358,6 +449,32 @@ static NSString * const kSAEncryptSecretKey = @"SAEncryptSecretKey";
         }
     }
     return secretKey;
+}
+
+- (void)swizzleFlushInteceptorMethods {
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        [SAFlushJSONInterceptor sa_swizzleMethod:@selector(buildJSONStringWithFlowData:) withMethod:@selector(sensorsdata_buildJSONStringWithFlowData:) error:NULL];
+        [SAFlushHTTPBodyInterceptor sa_swizzleMethod:@selector(buildBodyWithFlowData:) withMethod:@selector(sensorsdata_buildBodyWithFlowData:) error:NULL];
+    });
+}
+
+- (void)loadLocalRemoteConfig {
+    NSDictionary *config = [[SAStoreManager sharedInstance] objectForKey:kSDKConfigKey];
+    [self enableFlushEncryptWithRemoteConfig:config];
+}
+
+- (void)enableFlushEncryptWithRemoteConfig:(NSDictionary *)config NS_EXTENSION_UNAVAILABLE("Encrypt not supported for iOS extensions.") {
+    if (![config isKindOfClass:[NSDictionary class]]) {
+        return;
+    }
+    // enable flush encrypt or not
+    BOOL enableFlushEncrypt = NO;
+    id supportTransportEncrypt = config[kSARemoteConfigConfigsKey][kSARemoteConfigSupportTransportEncryptKey];
+    if ([supportTransportEncrypt isKindOfClass:[NSNumber class]]) {
+        enableFlushEncrypt = self.configOptions.enableTransportEncrypt && [supportTransportEncrypt boolValue];
+    }
+    self.configOptions.enableFlushEncrypt = enableFlushEncrypt;
 }
 
 @end

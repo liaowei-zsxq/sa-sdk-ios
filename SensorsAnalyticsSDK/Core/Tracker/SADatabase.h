@@ -1,21 +1,21 @@
 //
-//  MessageQueueBySqlite.h
-//  SensorsAnalyticsSDK
+// MessageQueueBySqlite.h
+// SensorsAnalyticsSDK
 //
-//  Created by 曹犟 on 15/7/7.
-//  Copyright © 2015-2020 Sensors Data Co., Ltd. All rights reserved.
+// Created by 曹犟 on 15/7/7.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
-//  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the License is distributed on an "AS IS" BASIS,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the License for the specific language governing permissions and
-//  limitations under the License.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 
 #import <Foundation/Foundation.h>
@@ -24,8 +24,8 @@
 NS_ASSUME_NONNULL_BEGIN
 
 /**
- *  @abstract
- *  一个基于Sqlite封装的接口，用于向其中添加和获取数据
+ * @abstract
+ * 一个基于Sqlite封装的接口，用于向其中添加和获取数据
  */
 @interface SADatabase : NSObject
 
@@ -50,7 +50,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 /// fetch first records with a certain size
 /// @param recordSize record size
-- (NSArray<SAEventRecord *> *)selectRecords:(NSUInteger)recordSize;
+/// @param instantEvent instant event or not
+- (NSArray<SAEventRecord *> *)selectRecords:(NSUInteger)recordSize isInstantEvent:(BOOL)instantEvent;
 
 
 /// bulk insert event records
@@ -66,6 +67,8 @@ NS_ASSUME_NONNULL_BEGIN
 /// @param recordIDs event recordIDs
 /// @param status status
 - (BOOL)updateRecords:(NSArray<NSString *> *)recordIDs status:(SAEventRecordStatus)status;
+
+- (NSUInteger)recordCountWithStatus:(SAEventRecordStatus)status;
 
 /// delete records with IDs
 /// @param recordIDs event record IDs

@@ -3,7 +3,7 @@
 // SensorsAnalyticsSDK
 //
 // Created by 储强盛 on 2021/1/14.
-// Copyright © 2021 Sensors Data Co., Ltd. All rights reserved.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ NS_ASSUME_NONNULL_BEGIN
 /// 禁用默认初始化
 - (instancetype)init NS_UNAVAILABLE;
 /// 禁用默认初始化
-- (instancetype)new NS_UNAVAILABLE;
++ (instancetype)new NS_UNAVAILABLE;
 
 /// 视图添加或移除
 - (void)didMoveToSuperviewWithView:(UIView *)view;

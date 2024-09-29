@@ -3,7 +3,7 @@
 // SensorsAnalyticsSDK
 //
 // Created by 储强盛 on 2021/1/25.
-// Copyright © 2021 Sensors Data Co., Ltd. All rights reserved.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ NS_ASSUME_NONNULL_BEGIN
 
  @param controllers 指定的页面的类名数组
  */
-- (void)addVisualizedAutoTrackViewControllers:(NSArray<NSString *> *)controllers;
+- (void)addVisualizedAutoTrackViewControllers:(NSArray<NSString *> *)controllers NS_EXTENSION_UNAVAILABLE("VisualizedAutoTrack not supported for iOS extensions.");
 
 /**
  某个页面是否开启 可视化全埋点 分析。
@@ -63,7 +63,7 @@ NS_ASSUME_NONNULL_BEGIN
 
  @param controllers 需要开启点击图的 ViewController 的类名
  */
-- (void)addHeatMapViewControllers:(NSArray<NSString *> *)controllers;
+- (void)addHeatMapViewControllers:(NSArray<NSString *> *)controllers NS_EXTENSION_UNAVAILABLE("HeatMap not supported for iOS extensions.");
 
 /**
  当前页面是否开启 点击图 分析。
@@ -78,15 +78,15 @@ NS_ASSUME_NONNULL_BEGIN
 @interface SAConfigOptions (Visualized)
 
 /// 开启点击图
-@property (nonatomic, assign) BOOL enableHeatMap API_UNAVAILABLE(macos);
+@property (nonatomic, assign) BOOL enableHeatMap API_UNAVAILABLE(macos) NS_EXTENSION_UNAVAILABLE("HeatMap not supported for iOS extensions.");
 
 /// 开启可视化全埋点
-@property (nonatomic, assign) BOOL enableVisualizedAutoTrack API_UNAVAILABLE(macos);
+@property (nonatomic, assign) BOOL enableVisualizedAutoTrack API_UNAVAILABLE(macos) NS_EXTENSION_UNAVAILABLE("VisualizedAutoTrack not supported for iOS extensions.");
 
 /// 开启可视化全埋点自定义属性
 ///
 /// 开启后，SDK 会默认开启可视化全埋点功能
-@property (nonatomic, assign) BOOL enableVisualizedProperties API_UNAVAILABLE(macos);
+@property (nonatomic, assign) BOOL enableVisualizedProperties API_UNAVAILABLE(macos) NS_EXTENSION_UNAVAILABLE("VisualizedAutoTrack not supported for iOS extensions.");
 
 @end
 

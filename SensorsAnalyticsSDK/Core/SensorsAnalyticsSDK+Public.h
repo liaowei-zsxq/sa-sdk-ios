@@ -3,7 +3,7 @@
 // SensorsAnalyticsSDK
 //
 // Created by 张敏超🍎 on 2020/11/5.
-// Copyright © 2020 Sensors Data Co., Ltd. All rights reserved.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,8 +20,8 @@
 
 #import <Foundation/Foundation.h>
 #import "SAConstants.h"
+#import "SAPropertyPlugin.h"
 
-@class SensorsAnalyticsPeople;
 @class SASecurityPolicy;
 @class SAConfigOptions;
 
@@ -40,17 +40,8 @@ extern NSString * const SensorsAnalyticsIdentityKeyEmail;
  *
  * @discussion
  * 使用 SensorsAnalyticsSDK 类来跟踪用户行为，并且把数据发给所指定的 SensorsAnalytics 的服务。
- * 它也提供了一个 SensorsAnalyticsPeople 类型的 property，用来访问用户 Profile 相关的 API。
  */
 @interface SensorsAnalyticsSDK : NSObject
-
-/**
- * @property
- *
- * @abstract
- * 对 SensorsAnalyticsPeople 这个 API 的访问接口
- */
-@property (atomic, readonly, strong) SensorsAnalyticsPeople *people;
 
 /**
  * @property
@@ -66,7 +57,7 @@ extern NSString * const SensorsAnalyticsIdentityKeyEmail;
  * @abstract
  * 用户登录唯一标识符
  */
-@property (atomic, readonly, copy) NSString *loginId;
+@property (atomic, readonly, copy, nullable) NSString *loginId;
 
 #pragma mark- init instance
 /**
@@ -132,7 +123,7 @@ extern NSString * const SensorsAnalyticsIdentityKeyEmail;
 * @param serverUrl 当前的 serverUrl
 * @param isRequestRemoteConfig 是否请求远程配置
 */
-- (void)setServerUrl:(NSString *)serverUrl isRequestRemoteConfig:(BOOL)isRequestRemoteConfig API_UNAVAILABLE(macos);
+- (void)setServerUrl:(NSString *)serverUrl isRequestRemoteConfig:(BOOL)isRequestRemoteConfig API_UNAVAILABLE(macos, tvos) NS_EXTENSION_UNAVAILABLE("RemoteConfig not supported for iOS extensions.");
 
 #pragma mark--cache and flush
 
@@ -192,6 +183,14 @@ extern NSString * const SensorsAnalyticsIdentityKeyEmail;
  */
 - (void)identify:(NSString *)anonymousId;
 
+#pragma mark - 业务 ID
+
+/**
+ @abstract
+ ID-Mapping 3.0 功能下已绑定的业务 ID 列表
+ */
+- (NSDictionary *)identities;
+
 /**
  @abstract
  ID-Mapping 3.0 功能下绑定业务 ID 功能
@@ -210,6 +209,8 @@ extern NSString * const SensorsAnalyticsIdentityKeyEmail;
  */
 - (void)unbind:(NSString *)key value:(NSString *)value;
 
+/// ID3 reset anonymous identity
+- (void)resetAnonymousIdentity:(nullable NSString *)identity;
 #pragma mark - trackTimer
 /**
  开始事件计时
@@ -324,42 +325,13 @@ extern NSString * const SensorsAnalyticsIdentityKeyEmail;
 
 /**
  * @abstract
- * 获取 LastScreenUrl
- *
- * @return LastScreenUrl
- */
-- (NSString *)getLastScreenUrl API_UNAVAILABLE(macos);
-
-/**
- * @abstract
- * App 退出或进到后台时清空 referrer，默认情况下不清空
- */
-- (void)clearReferrerWhenAppEnd API_UNAVAILABLE(macos);
-
-/**
- * @abstract
- * 获取 LastScreenTrackProperties
- *
- * @return LastScreenTrackProperties
- */
-- (NSDictionary *)getLastScreenTrackProperties API_UNAVAILABLE(macos);
-
-/**
- @abstract
- * Track App Extension groupIdentifier 中缓存的数据
- *
- * @param groupIdentifier groupIdentifier
- * @param completion  完成 track 后的 callback
- */
-- (void)trackEventFromExtensionWithGroupIdentifier:(NSString *)groupIdentifier completion:(void (^)(NSString *groupIdentifier, NSArray *events)) completion;
-
-/**
- * @abstract
  * 修改入库之前的事件属性
  *
  * @param callback 传入事件名称和事件属性，可以修改或删除事件属性。请返回一个 BOOL 值，true 表示事件将入库， false 表示事件将被抛弃
  */
 - (void)trackEventCallback:(BOOL (^)(NSString *eventName, NSMutableDictionary<NSString *, id> *properties))callback;
+
+- (void)registerLimitKeys:(NSDictionary<SALimitKey, NSString *> *)keys;
 
 /**
  * @abstract
@@ -420,6 +392,22 @@ extern NSString * const SensorsAnalyticsIdentityKeyEmail;
 
 /**
  * @abstract
+ * 注册属性插件
+ *
+ * @param plugin 属性插件对象
+ */
+- (void)registerPropertyPlugin:(SAPropertyPlugin *)plugin;
+
+/**
+ * @abstract
+ * 注销属性插件
+ *
+ * @param pluginClass 插件类型
+ */
+- (void)unregisterPropertyPluginWithPluginClass:(Class)pluginClass;
+
+/**
+ * @abstract
  * 得到 SDK 的版本
  *
  * @return SDK 的版本
@@ -469,7 +457,7 @@ extern NSString * const SensorsAnalyticsIdentityKeyEmail;
  * @param url 打开的 URL
  * @return YES/NO
  */
-- (BOOL)canHandleURL:(NSURL *)url API_UNAVAILABLE(macos);
+- (BOOL)canHandleURL:(NSURL *)url API_UNAVAILABLE(macos, tvos) NS_EXTENSION_UNAVAILABLE("HandleURL not supported for iOS extensions.");
 
 /**
  * @abstract
@@ -477,7 +465,7 @@ extern NSString * const SensorsAnalyticsIdentityKeyEmail;
  *
  * @param url 打开本 app 的回调的 url
  */
-- (BOOL)handleSchemeUrl:(NSURL *)url API_UNAVAILABLE(macos);
+- (BOOL)handleSchemeUrl:(NSURL *)url API_UNAVAILABLE(macos, tvos) NS_EXTENSION_UNAVAILABLE("HandleURL not supported for iOS extensions.");
 
 #pragma mark - profile
 /**
@@ -628,127 +616,7 @@ extern NSString * const SensorsAnalyticsIdentityKeyEmail;
  * 注意：清除 keychain 中 kSAService 名下的数据，包括 distinct_id 标记。
  *
  */
-- (void)clearKeychainData API_UNAVAILABLE(macos);
-
-@end
-
-#pragma mark -
-/**
- * @class
- * SensorsAnalyticsPeople 类
- *
- * @abstract
- * 用于记录用户 Profile 的 API
- *
- * @discussion
- * <b>请不要自己来初始化这个类.</b> 请通过 SensorsAnalyticsSDK 提供的 people 这个 property 来调用
- */
-@interface SensorsAnalyticsPeople : NSObject
-
-/**
- * @abstract
- * 直接设置用户的一个或者几个 Profiles
- *
- * @discussion
- * 这些 Profile 的内容用一个 NSDictionary 来存储
- * 其中的 key 是 Profile 的名称，必须是 NSString
- * Value 则是 Profile 的内容，只支持 NSString、NSNumber、NSSet、NSArray、NSDate 这些类型
- * 特别的，NSSet 或者 NSArray 类型的 value 中目前只支持其中的元素是 NSString
- * 如果某个 Profile 之前已经存在了，则这次会被覆盖掉；不存在，则会创建
- *
- * @param profileDict 要替换的那些 Profile 的内容
- */
-- (void)set:(NSDictionary *)profileDict;
-
-/**
- * @abstract
- * 首次设置用户的一个或者几个 Profiles
- *
- * @discussion
- * 与set接口不同的是，如果该用户的某个 Profile 之前已经存在了，会被忽略；不存在，则会创建
- *
- * @param profileDict 要替换的那些 Profile 的内容
- */
-- (void)setOnce:(NSDictionary *)profileDict;
-
-/**
- * @abstract
- * 设置用户的单个 Profile 的内容
- *
- * @discussion
- * 如果这个 Profile 之前已经存在了，则这次会被覆盖掉；不存在，则会创建
- *
- * @param profile Profile 的名称
- * @param content Profile 的内容
- */
-- (void)set:(NSString *) profile to:(id)content;
-
-/**
- * @abstract
- * 首次设置用户的单个 Profile 的内容
- *
- * @discussion
- * 与 set 类接口不同的是，如果这个 Profile 之前已经存在了，则这次会被忽略；不存在，则会创建
- *
- * @param profile Profile 的名称
- * @param content Profile 的内容
- */
-- (void)setOnce:(NSString *) profile to:(id)content;
-
-/**
- * @abstract
- * 删除某个 Profile 的全部内容
- *
- * @discussion
- * 如果这个 Profile 之前不存在，则直接忽略
- *
- * @param profile Profile 的名称
- */
-- (void)unset:(NSString *) profile;
-
-/**
- * @abstract
- * 给一个数值类型的 Profile 增加一个数值
- *
- * @discussion
- * 只能对 NSNumber 类型的 Profile 调用这个接口，否则会被忽略
- * 如果这个 Profile 之前不存在，则初始值当做 0 来处理
- *
- * @param profile  待增加数值的 Profile 的名称
- * @param amount   要增加的数值
- */
-- (void)increment:(NSString *)profile by:(NSNumber *)amount;
-
-/**
- * @abstract
- * 给多个数值类型的 Profile 增加数值
- *
- * @discussion
- * profileDict 中，key是 NSString，value 是 NSNumber
- * 其它与 - (void)increment:by: 相同
- *
- * @param profileDict 多个
- */
-- (void)increment:(NSDictionary *)profileDict;
-
-/**
- * @abstract
- * 向一个 NSSet 或者 NSArray 类型的 value 添加一些值
- *
- * @discussion
- * 如前面所述，这个 NSSet 或者 NSArray 的元素必须是 NSString，否则，会忽略
- * 同时，如果要 append 的 Profile 之前不存在，会初始化一个空的 NSSet 或者 NSArray
- *
- * @param profile profile
- * @param content description
- */
-- (void)append:(NSString *)profile by:(NSObject<NSFastEnumeration> *)content;
-
-/**
- * @abstract
- * 删除当前这个用户的所有记录
- */
-- (void)deleteUser;
+- (void)clearKeychainData API_UNAVAILABLE(macos) NS_EXTENSION_UNAVAILABLE("KeychainData not supported for iOS extensions.");
 
 @end
 
@@ -767,28 +635,28 @@ extern NSString * const SensorsAnalyticsIdentityKeyEmail;
  * 1. 是否 WIFI/3G/4G 网络
  * 2. 是否满足以下数据发送条件之一:
  *   1) 与上次发送的时间间隔是否大于 flushInterval
- *   2) 本地缓存日志数目是否达到 flushBulkSize
+ *   2) 本地缓存日志数目是否超过 flushBulkSize
  * 如果满足这两个条件之一，则向服务器发送一次数据；如果都不满足，则把数据加入到队列中，等待下次检查时把整个队列的内容一并发送。
  * 需要注意的是，为了避免占用过多存储，队列最多只缓存10000条数据。
  */
-@property (atomic) UInt64 flushInterval __attribute__((deprecated("已过时，请参考 SAConfigOptions 类的 flushInterval")));
+@property (atomic) NSInteger flushInterval __attribute__((deprecated("已过时，请参考 SAConfigOptions 类的 flushInterval")));
 
 /**
  * @property
  *
  * @abstract
- * 本地缓存的最大事件数目，当累积日志量达到阈值时发送数据
+ * 本地缓存的最大事件数目，当累积日志量超过阈值时发送数据
  *
  * @discussion
  * 默认值为 100，在每次调用 track 和 profileSet 等接口的时候，都会检查如下条件，以判断是否向服务器上传数据:
  * 1. 是否 WIFI/3G/4G 网络
  * 2. 是否满足以下数据发送条件之一:
  *   1) 与上次发送的时间间隔是否大于 flushInterval
- *   2) 本地缓存日志数目是否达到 flushBulkSize
+ *   2) 本地缓存日志数目是否超过 flushBulkSize
  * 如果同时满足这两个条件，则向服务器发送一次数据；如果不满足，则把数据加入到队列中，等待下次检查时把整个队列的内容一并发送。
  * 需要注意的是，为了避免占用过多存储，队列最多只缓存 10000 条数据。
  */
-@property (atomic) UInt64 flushBulkSize __attribute__((deprecated("已过时，请参考 SAConfigOptions 类的 flushBulkSize")));
+@property (atomic) NSInteger flushBulkSize __attribute__((deprecated("已过时，请参考 SAConfigOptions 类的 flushBulkSize")));
 
 /**
  * @abstract
@@ -798,7 +666,7 @@ extern NSString * const SensorsAnalyticsIdentityKeyEmail;
  * 默认为 10000 条事件
  *
  */
-@property (nonatomic) UInt64 maxCacheSize  __attribute__((deprecated("已过时，请参考 SAConfigOptions 类的 maxCacheSize")));
+@property (nonatomic) NSInteger maxCacheSize  __attribute__((deprecated("已过时，请参考 SAConfigOptions 类的 maxCacheSize")));
 
 /**
  * @abstract
@@ -816,7 +684,7 @@ extern NSString * const SensorsAnalyticsIdentityKeyEmail;
  目前 DebugMode 为动态开启，详细请参考说明文档：https://www.sensorsdata.cn/manual/ios_sdk.html
  @param debugMode 调试模式
  */
-- (void)setDebugMode:(SensorsAnalyticsDebugMode)debugMode __attribute__((deprecated("已过时，建议动态开启调试模式"))) API_UNAVAILABLE(macos);
+- (void)setDebugMode:(SensorsAnalyticsDebugMode)debugMode __attribute__((deprecated("已过时，建议动态开启调试模式"))) API_UNAVAILABLE(macos, tvos) NS_EXTENSION_UNAVAILABLE("DebugMode not supported for iOS extensions.");
 
 /**
  * @abstract
@@ -846,6 +714,14 @@ extern NSString * const SensorsAnalyticsIdentityKeyEmail;
  * @param timeUnit          计时单位，毫秒/秒/分钟/小时
  */
 - (void)trackTimer:(NSString *)event withTimeUnit:(SensorsAnalyticsTimeUnit)timeUnit __attribute__((deprecated("已过时，请参考 trackTimerStart")));
+
+/**
+ ⚠️ 此接口为 ID-Mapping 3.0 解决值域冲突的特殊场景下的接口，请咨询确认后再使用!!
+
+ @param key 当前用户的登录 ID key
+ @param loginId 当前用户的登录 ID
+ */
+- (void)loginWithKey:(NSString *)key loginId:(NSString *)loginId __attribute__((deprecated("已过期，旧版本如使用此接口请继续，新用户请不要使用此方法！")));
 
 @end
 

@@ -3,7 +3,7 @@
 // SensorsAnalyticsSDK
 //
 // Created by wenquan on 2021/6/26.
-// Copyright © 2021 Sensors Data Co., Ltd. All rights reserved.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -92,6 +92,15 @@
     } else {
         self.asymmetricEncryptType = asymmetricType;
     }
+}
+
+- (nonnull id)copyWithZone:(nullable NSZone *)zone {
+    SASecretKey *key = [[[self class] allocWithZone:zone] init];
+    key.key = self.key;
+    key.version = self.version;
+    key.symmetricEncryptType = self.symmetricEncryptType;
+    key.asymmetricEncryptType = self.asymmetricEncryptType;
+    return key;
 }
 
 @end

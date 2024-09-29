@@ -3,7 +3,7 @@
 // SensorsAnalyticsSDK
 //
 // Created by 张敏超🍎 on 2021/4/27.
-// Copyright © 2021 Sensors Data Co., Ltd. All rights reserved.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,10 +29,11 @@
 #import "SAConstants.h"
 #import "SAValidator.h"
 #import "SAAutoTrackUtils.h"
-#import "UIView+AutoTrack.h"
-#import "UIViewController+AutoTrack.h"
+#import "UIView+SAAutoTrack.h"
+#import "UIViewController+SAAutoTrack.h"
 #import "SAModuleManager.h"
 #import "SALog.h"
+#import "SAUIProperties.h"
 
 @interface SAAppClickTracker ()
 
@@ -94,7 +95,7 @@
     [properties addEntriesFromDictionary:dic];
 
     // 解析 Cell
-    UIView *cell = [SAAutoTrackUtils cellWithScrollView:scrollView selectedAtIndexPath:indexPath];
+    UIView *cell = [SAUIProperties cellWithScrollView:scrollView andIndexPath:indexPath];
     if (!cell) {
         return;
     }
@@ -136,20 +137,31 @@
 }
 
 - (void)ignoreViewType:(Class)aClass {
+    if (!aClass) {
+        return;
+    }
     [_ignoredViewTypeList addObject:aClass];
 }
 
 - (BOOL)isViewTypeIgnored:(Class)aClass {
-    for (Class obj in _ignoredViewTypeList) {
-        if ([aClass isSubclassOfClass:obj]) {
+    for (Class tempClass in self.ignoredViewTypeList) {
+        if ([aClass isSubclassOfClass:tempClass]) {
             return YES;
         }
     }
     return NO;
 }
 
+- (void)ignoreAppClickOnViews:(NSArray<Class> *)views {
+    if (![views isKindOfClass:[NSArray class]]) {
+        return;
+    }
+    [self.ignoredViewTypeList addObjectsFromArray:views];
+}
+
 - (BOOL)isIgnoreEventWithView:(UIView *)view {
-    return self.isIgnored || [self isViewTypeIgnored:[view class]];
+    UIViewController *viewController = [SAUIProperties findNextViewControllerByResponder:view];
+    return self.isIgnored || [self isViewTypeIgnored:[view class]] || [self isViewControllerIgnored:viewController];
 }
 
 #pragma mark – Private Methods
@@ -161,7 +173,7 @@
 }
 
 - (void)autoTrackEventWithView:(UIView *)view properties:(NSDictionary<NSString *, id> * _Nullable)properties {
-    if (self.isIgnored) {
+    if (self.isIgnored || view.sensorsdata_isIgnored) {
         return;
     }
 

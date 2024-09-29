@@ -3,7 +3,7 @@
 // SensorsAnalyticsSDK
 //
 // Created by wenquan on 2020/11/1.
-// Copyright © 2020 Sensors Data Co., Ltd. All rights reserved.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -108,17 +108,18 @@
     @try {
         // 只读取远程配置信息中的开关状态，不处理加密等其他逻辑字段
         NSMutableDictionary<NSString *, id> *configs = [NSMutableDictionary dictionary];
-        configs[@"disableDebugMode"] = config[@"configs"][@"disableDebugMode"];
-        configs[@"disableSDK"] = config[@"configs"][@"disableSDK"];
-        configs[@"autoTrackMode"] = config[@"configs"][@"autoTrackMode"];
-        configs[@"event_blacklist"] = config[@"configs"][@"event_blacklist"];
-        configs[@"effect_mode"] = config[@"configs"][@"effect_mode"];
-        configs[@"nv"] = config[@"configs"][@"nv"];
+        configs[@"disableDebugMode"] = config[kSARemoteConfigConfigsKey][@"disableDebugMode"];
+        configs[@"disableSDK"] = config[kSARemoteConfigConfigsKey][@"disableSDK"];
+        configs[@"autoTrackMode"] = config[kSARemoteConfigConfigsKey][@"autoTrackMode"];
+        configs[@"event_blacklist"] = config[kSARemoteConfigConfigsKey][@"event_blacklist"];
+        configs[@"effect_mode"] = config[kSARemoteConfigConfigsKey][@"effect_mode"];
+        configs[@"nv"] = config[kSARemoteConfigConfigsKey][@"nv"];
+        configs[kSARemoteConfigSupportTransportEncryptKey] = config[kSARemoteConfigConfigsKey][kSARemoteConfigSupportTransportEncryptKey];
 
         // 读取远程配置信息中的版本信息
         NSMutableDictionary<NSString *, id> *remoteConfig = [NSMutableDictionary dictionary];
         remoteConfig[@"v"] = config[@"v"];
-        remoteConfig[@"configs"] = configs;
+        remoteConfig[kSARemoteConfigConfigsKey] = configs;
 
         return remoteConfig;
     } @catch (NSException *exception) {
@@ -127,15 +128,11 @@
     }
 }
 
-- (NSDictionary<NSString *, id> *)extractEncryptConfig:(NSDictionary<NSString *, id> *)config {
-    // 远程配置中新增 key_v2，传递给加密模块时不做处理直接传递整个远程配置信息
-    return [config[@"configs"] copy];
-}
-
 - (void)trackAppRemoteConfigChanged:(NSDictionary<NSString *, id> *)remoteConfig {
     NSString *eventConfigString = [SAJSONUtil stringWithJSONObject:remoteConfig];
     SARemoteConfigEventObject *object = [[SARemoteConfigEventObject alloc] initWithEventId:kSAEventNameAppRemoteConfigChanged];
-    [SensorsAnalyticsSDK.sdkInstance asyncTrackEventObject:object properties:@{kSAEventPropertyAppRemoteConfig : eventConfigString ?: @""}];
+
+    [SensorsAnalyticsSDK.sdkInstance trackEventObject:object properties:@{kSAEventPropertyAppRemoteConfig : eventConfigString ?: @""}];
     // 触发 $AppRemoteConfigChanged 时 flush 一次
     [SensorsAnalyticsSDK.sdkInstance flush];
 }
@@ -155,7 +152,7 @@
     return [self.model.localLibVersion isEqualToString:SensorsAnalyticsSDK.sdkInstance.libVersion];
 }
 
-- (BOOL)shouldAddVersionOnEnableEncrypt {
+- (BOOL)shouldAddVersionOnEnableEncrypt NS_EXTENSION_UNAVAILABLE("Encrypt not supported for iOS extensions.") {
 #if __has_include("SAConfigOptions+Encrypt.h")
     if (!self.configOptions.enableEncrypt) {
         return YES;
@@ -221,7 +218,7 @@
     return self.model.disableDebugMode;
 }
 
-- (NSURL *)remoteConfigURL {
+- (NSURL *)remoteConfigURL NS_EXTENSION_UNAVAILABLE("RemoteConfig not supported for iOS extensions.") {
     return [NSURL URLWithString:self.configOptions.remoteConfigURL];
 }
 

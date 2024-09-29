@@ -1,5 +1,5 @@
-![logo](https://opensource.sensorsdata.cn/wp-content/uploads/logo.png)
-<br><br>
+<img src="https://ow-file.sensorsdata.cn/www/home/header/sensors_header_icon.svg" width="200" >
+
 [![License](https://img.shields.io/github/license/sensorsdata/sa-sdk-ios.svg)](https://github.com/sensorsdata/sa-sdk-ios/blob/master/LICENSE)
 [![Average time to resolve an issue](http://isitmaintained.com/badge/resolution/sensorsdata/sa-sdk-ios.svg)](http://isitmaintained.com/project/sensorsdata/sa-sdk-ios "Average time to resolve an issue")
 [![Percentage of issues still open](http://isitmaintained.com/badge/open/sensorsdata/sa-sdk-ios.svg)](http://isitmaintained.com/project/sensorsdata/sa-sdk-ios "Percentage of issues still open")
@@ -21,7 +21,14 @@ SensorsAnalytics SDK 是国内第一家开源商用版用户行为采集 SDK，�
 
 ## 基本要求
 
-iOS 8.0 及以上，Xcode 9.0 及以上。
+iOS 9.0 及以上，Xcode 9.0 及以上。
+
+## 推荐版本
+
+| 推荐版本 | 版本链接 |
+| ------ | ------ | 
+| v4.5.7 | https://github.com/sensorsdata/sa-sdk-ios/releases/tag/v4.5.7  |
+| v4.4.5 | https://github.com/sensorsdata/sa-sdk-ios/releases/tag/v4.4.5  |
 
 ## 集成文档
 
@@ -40,24 +47,11 @@ iOS 8.0 及以上，Xcode 9.0 及以上。
 
 可参考 [ROADMAP](ROADMAP.md).
 
-## 讨论
-
-| 扫码加入神策数据开源社区 QQ 群<br>群号：785122381 | 扫码加入神策数据开源社区微信群 |
-| ------ | ------ |
-|![ QQ 讨论群](https://opensource.sensorsdata.cn/wp-content/uploads/ContentCommonPic_1.png) | ![ 微信讨论群 ](https://opensource.sensorsdata.cn/wp-content/uploads/ContentCommonPic_2.png) |
-
-## 公众号
-
-| 扫码关注<br>神策数据开源社区 | 扫码关注<br>神策数据开源社区服务号 |
-| ------ | ------ |
-|![ 微信订阅号 ](https://opensource.sensorsdata.cn/wp-content/uploads/ContentCommonPic_3.png) | ![ 微信服务号 ](https://opensource.sensorsdata.cn/wp-content/uploads/ContentCommonPic_4.png) |
-
 
 ## 新书推荐
 
-| 《数据驱动：从方法到实践》 | 《Android 全埋点解决方案》 | 《iOS 全埋点解决方案》
+| [《数据驱动：从方法到实践》](https://item.jd.com/12322322.html) | [《Android 全埋点解决方案》](https://item.jd.com/12574672.html) | [《iOS 全埋点解决方案》](https://item.jd.com/12867068.html)
 | ------ | ------ | ------ |
-| [![《数据驱动：从方法到实践》](https://opensource.sensorsdata.cn/wp-content/uploads/data_driven_book_1.jpg)](https://item.jd.com/12322322.html) | [![《Android 全埋点解决方案》](https://opensource.sensorsdata.cn/wp-content/uploads/Android-全埋点thumbnail_1.png)](https://item.jd.com/12574672.html) | [![《iOS 全埋点解决方案》](https://opensource.sensorsdata.cn/wp-content/uploads/iOS-全埋点thumbnail_1.png)](https://item.jd.com/12867068.html)
 
 
 ## 感谢
@@ -67,7 +61,7 @@ iOS 8.0 及以上，Xcode 9.0 及以上。
 
 ## License
 
-Copyright 2015－2021 Sensors Data Inc.
+Copyright 2015－2024 Sensors Data Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

@@ -3,7 +3,7 @@
 // SensorsAnalyticsSDK
 //
 // Created by 储强盛 on 2020/12/25.
-// Copyright © 2020 Sensors Data Co., Ltd. All rights reserved.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,11 +23,10 @@
 #endif
 
 #import "SAVisualizedManager.h"
-#import "SAVisualizedConnection.h"
 #import "SAAlertController.h"
 #import "UIViewController+SAElementPath.h"
 #import "SAConstants+Private.h"
-#import "UIView+AutoTrack.h"
+#import "UIView+SAAutoTrack.h"
 #import "SAVisualizedUtils.h"
 #import "SAModuleManager.h"
 #import "SAJavaScriptBridgeManager.h"
@@ -37,6 +36,8 @@
 #import "SAJSONUtil.h"
 #import "SASwizzle.h"
 #import "SALog.h"
+#import "SAFlutterPluginBridge.h"
+#import "UIView+SAInternalProperties.h"
 
 @interface SAVisualizedManager()<SAConfigChangesDelegate>
 
@@ -45,17 +46,17 @@
 /// 当前类型
 @property (nonatomic, assign) SensorsAnalyticsVisualizedType visualizedType;
 
-/// 指定开启可视化的 viewControllers 名称
+/// 指定开启可视化/点击分析的 viewControllers 名称
 @property (nonatomic, strong) NSMutableSet<NSString *> *visualizedViewControllers;
 
 /// 自定义属性采集
 @property (nonatomic, strong) SAVisualPropertiesTracker *visualPropertiesTracker;
 
 /// 获取远程配置
-@property (nonatomic, strong, readwrite) SAVisualPropertiesConfigSources *configSources;
+@property (nonatomic, strong) SAVisualPropertiesConfigSources *configSources;
 
 /// 埋点校验
-@property (nonatomic, strong, readwrite) SAVisualizedEventCheck *eventCheck;
+@property (nonatomic, strong) SAVisualizedEventCheck *eventCheck;
 
 @end
 
@@ -95,6 +96,10 @@
 
         // 配置更新，发送到 WKWebView 的内嵌 H5
         [self.visualPropertiesTracker.viewNodeTree updateConfig:self.configSources.originalResponse];
+
+        // 配置更新，通知 Flutter
+        [SAFlutterPluginBridge.sharedInstance changeVisualPropertiesConfig:self.configSources.originalResponse];
+
     } else {
         self.visualPropertiesTracker = nil;
         self.eventCheck = nil;
@@ -102,7 +107,7 @@
 }
 
 #pragma mark -
-- (void)setEnable:(BOOL)enable {
+- (void)setEnable:(BOOL)enable NS_EXTENSION_UNAVAILABLE("VisualizedAutoTrack not supported for iOS extensions.") {
     _enable = enable;
 
     if (!enable) {
@@ -134,7 +139,7 @@
     }
 }
 
-- (void)setConfigOptions:(SAConfigOptions *)configOptions {
+- (void)setConfigOptions:(SAConfigOptions *)configOptions NS_EXTENSION_UNAVAILABLE("VisualizedAutoTrack not supported for iOS extensions.") {
     _configOptions = configOptions;
 
     // 由于自定义属性依赖于可视化全埋点，所以只要开启自定义属性，默认打开可视化全埋点相关功能
@@ -151,7 +156,7 @@
 }
 
 #pragma mark -
-- (NSString *)javaScriptSource {
+- (NSString *)javaScriptSource NS_EXTENSION_UNAVAILABLE("VisualizedAutoTrack not supported for iOS extensions.") {
     if (!self.enable) {
         return nil;
     }
@@ -194,7 +199,7 @@
         return NO;
     }
 
-    NSDictionary *queryItems = [SAURLUtils decodeRueryItemsWithURL:url];
+    NSDictionary *queryItems = [SAURLUtils decodeQueryItemsWithURL:url];
     NSString *featureCode = queryItems[@"feature_code"];
     NSString *postURLStr = queryItems[@"url"];
 
@@ -203,22 +208,23 @@
     BOOL isEqualProject = [[SensorsAnalyticsSDK sharedInstance].network.project isEqualToString:project];
     if (!isEqualProject) {
         if ([self isHeatMapURL:url]) {
-            [SAVisualizedManager showAlterViewWithTitle:@"提示" message:@"App 集成的项目与电脑浏览器打开的项目不同，无法进行点击分析"];
+            [SAVisualizedManager showAlterViewWithTitle:SALocalizedString(@"SAAlertHint") message:SALocalizedString(@"SAAppClicksAnalyticsProjectError")];
         } else if([self isVisualizedAutoTrackURL:url]){
-            [SAVisualizedManager showAlterViewWithTitle:@"提示" message:@"App 集成的项目与电脑浏览器打开的项目不同，无法进行可视化全埋点"];
+            [SAVisualizedManager showAlterViewWithTitle:SALocalizedString(@"SAAlertHint") message:SALocalizedString(@"SAVisualizedProjectError")];
         }
         return YES;
     }
 
     // 未开启点击图
     if ([url.host isEqualToString:@"heatmap"] && ![[SensorsAnalyticsSDK sharedInstance] isHeatMapEnabled]) {
-        [SAVisualizedManager showAlterViewWithTitle:@"提示" message:@"SDK 没有被正确集成，请联系贵方技术人员开启点击分析"];
+        [SAVisualizedManager showAlterViewWithTitle:SALocalizedString(@"SAAlertHint") message:SALocalizedString(@"SAAppClicksAnalyticsSDKError")];
         return YES;
     }
 
     // 未开启可视化全埋点
     if ([url.host isEqualToString:@"visualized"] && ![[SensorsAnalyticsSDK sharedInstance] isVisualizedAutoTrackEnabled]) {
-        [SAVisualizedManager showAlterViewWithTitle:@"提示" message:@"SDK 没有被正确集成，请联系贵方技术人员开启可视化全埋点"];
+        [SAVisualizedManager showAlterViewWithTitle:SALocalizedString(@"SAAlertHint") message:SALocalizedString(@"SAVisualizedSDKError")];
+        
         return YES;
     }
     if (featureCode && postURLStr && self.isEnable) {
@@ -226,28 +232,28 @@
         return YES;
     }
     //feature_code url 参数错误
-    [SAVisualizedManager showAlterViewWithTitle:@"ERROR" message:@"参数错误"];
+    [SAVisualizedManager showAlterViewWithTitle:@"ERROR" message:SALocalizedString(@"SAVisualizedParameterError")];
     return NO;
 }
 
 + (void)showAlterViewWithTitle:(NSString *)title message:(NSString *)message {
     SAAlertController *alertController = [[SAAlertController alloc] initWithTitle:title message:message preferredStyle:SAAlertControllerStyleAlert];
-    [alertController addActionWithTitle:@"确认" style:SAAlertActionStyleDefault handler:nil];
+    [alertController addActionWithTitle:SALocalizedString(@"SAAlertOK") style:SAAlertActionStyleDefault handler:nil];
     [alertController show];
 }
 
 - (void)showOpenAlertWithURL:(NSURL *)URL featureCode:(NSString *)featureCode postURL:(NSString *)postURL {
-    NSString *alertTitle = @"提示";
+    NSString *alertTitle = SALocalizedString(@"SAAlertHint");
     NSString *alertMessage = [self alertMessageWithURL:URL];
 
     SAAlertController *alertController = [[SAAlertController alloc] initWithTitle:alertTitle message:alertMessage preferredStyle:SAAlertControllerStyleAlert];
 
-    [alertController addActionWithTitle:@"取消" style:SAAlertActionStyleCancel handler:^(SAAlertAction *_Nonnull action) {
+    [alertController addActionWithTitle:SALocalizedString(@"SAAlertCancel") style:SAAlertActionStyleCancel handler:^(SAAlertAction *_Nonnull action) {
         [self.visualizedConnection close];
         self.visualizedConnection = nil;
     }];
 
-    [alertController addActionWithTitle:@"继续" style:SAAlertActionStyleDefault handler:^(SAAlertAction *_Nonnull action) {
+    [alertController addActionWithTitle:SALocalizedString(@"SAAlertContinue") style:SAAlertActionStyleDefault handler:^(SAAlertAction *_Nonnull action) {
         // 关闭之前的连接
         [self.visualizedConnection close];
         // start
@@ -271,20 +277,15 @@
 - (NSString *)alertMessageWithURL:(NSURL *)URL{
     NSString *alertMessage = nil;
     if ([self isHeatMapURL:URL]) {
-        alertMessage = @"正在连接 App 点击分析";
+        alertMessage = SALocalizedString(@"SAAppClicksAnalyticsConnect");
     } else {
-        alertMessage = @"正在连接 App 可视化全埋点";
+        alertMessage = SALocalizedString(@"SAVisualizedConnect");
     }
 
     if (![SAReachability sharedInstance].isReachableViaWiFi) {
-        alertMessage = [alertMessage stringByAppendingString: @"，建议在 WiFi 环境下使用"];
+        alertMessage = [alertMessage stringByAppendingString:SALocalizedString(@"SAVisualizedWifi")];
     }
     return alertMessage;
-}
-
-/// 当前类型
-- (SensorsAnalyticsVisualizedType)currentVisualizedType {
-    return self.visualizedType;
 }
 
 #pragma mark - Visualize
@@ -314,7 +315,7 @@
     if (![view isKindOfClass:UIView.class]) {
         return nil;
     }
-    UIViewController<SAAutoTrackViewControllerProperty> *viewController = view.sensorsdata_viewController;
+    UIViewController<SAUIViewControllerInternalProperties> *viewController = view.sensorsdata_viewController;
     if (!viewController) {
         return nil;
     }
@@ -324,13 +325,10 @@
         return nil;
     }
 
-    // 1 获取 viewPath 相关属性
-    NSString *elementSelector = [SAVisualizedUtils viewPathForView:view atViewController:viewController];
-
-    NSString *elementPath = [SAVisualizedUtils viewSimilarPathForView:view atViewController:viewController shouldSimilarPath:YES];
+    // 获取 viewPath 相关属性
+    NSString *elementPath = [SAVisualizedUtils viewSimilarPathForView:view atViewController:viewController];
     
     NSMutableDictionary *viewPthProperties = [NSMutableDictionary dictionary];
-    viewPthProperties[kSAEventPropertyElementSelector] = elementSelector;
     viewPthProperties[kSAEventPropertyElementPath] = elementPath;
 
     return viewPthProperties.count > 0 ? viewPthProperties : nil;

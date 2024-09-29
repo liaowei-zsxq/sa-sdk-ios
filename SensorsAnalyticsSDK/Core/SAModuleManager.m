@@ -3,7 +3,7 @@
 // SensorsAnalyticsSDK
 //
 // Created by 张敏超🍎 on 2020/8/14.
-// Copyright © 2020 Sensors Data Co., Ltd. All rights reserved.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -37,13 +37,14 @@ static NSString * const kSAChannelMatchModuleName = @"ChannelMatch";
 static NSString * const kSAVisualizedModuleName = @"Visualized";
 
 static NSString * const kSAEncryptModuleName = @"Encrypt";
-static NSString * const kSADeeplinkModuleName = @"Deeplink";
+static NSString * const kSADeepLinkModuleName = @"DeepLink";
 static NSString * const kSANotificationModuleName = @"AppPush";
 static NSString * const kSAAutoTrackModuleName = @"AutoTrack";
 static NSString * const kSARemoteConfigModuleName = @"RemoteConfig";
 
 static NSString * const kSAJavaScriptBridgeModuleName = @"JavaScriptBridge";
 static NSString * const kSAExceptionModuleName = @"Exception";
+static NSString * const kSAExposureModuleName = @"Exposure";
 
 @interface SAModuleManager ()
 
@@ -58,10 +59,6 @@ static NSString * const kSAExceptionModuleName = @"Exception";
 
 + (void)startWithConfigOptions:(SAConfigOptions *)configOptions {
     SAModuleManager.sharedInstance.configOptions = configOptions;
-    // 禁止 SDK 时，不开启其他模块
-    if (configOptions.disableSDK) {
-        return;
-    }
     [[SAModuleManager sharedInstance] loadModulesWithConfigOptions:configOptions];
 }
 
@@ -98,6 +95,10 @@ static NSString * const kSAExceptionModuleName = @"Exception";
 // module加载
 - (void)loadModulesWithConfigOptions:(SAConfigOptions *)configOptions {
     [self loadModule:kSAJavaScriptBridgeModuleName withConfigOptions:configOptions];
+    // 禁止 SDK 时，不开启其他模块
+    if (configOptions.disableSDK) {
+        return;
+    }
 #if TARGET_OS_IOS
     for (NSString *moduleName in self.moduleNames) {
         if ([moduleName isEqualToString:kSAJavaScriptBridgeModuleName]) {
@@ -124,9 +125,9 @@ static NSString * const kSAExceptionModuleName = @"Exception";
 
 - (NSArray<NSString *> *)moduleNames {
     return @[kSAJavaScriptBridgeModuleName, kSANotificationModuleName, kSAChannelMatchModuleName,
-             kSADeeplinkModuleName, kSADebugModeModuleName, kSALocationModuleName,
+             kSADeepLinkModuleName, kSADebugModeModuleName, kSALocationModuleName,
              kSAAutoTrackModuleName, kSAVisualizedModuleName, kSAEncryptModuleName,
-             kSADeviceOrientationModuleName, kSAExceptionModuleName, kSARemoteConfigModuleName];
+             kSADeviceOrientationModuleName, kSAExceptionModuleName, kSARemoteConfigModuleName, kSAExposureModuleName];
 }
 
 #pragma mark - Public
@@ -288,20 +289,8 @@ static NSString * const kSAExceptionModuleName = @"Exception";
     return nil;
 }
 
-- (void)setDebugMode:(SensorsAnalyticsDebugMode)debugMode {
-    self.debugModeManager.debugMode = debugMode;
-}
-
-- (SensorsAnalyticsDebugMode)debugMode {
-    return self.debugModeManager.debugMode;
-}
-
 - (void)setShowDebugAlertView:(BOOL)isShow {
     [self.debugModeManager setShowDebugAlertView:isShow];
-}
-
-- (void)handleDebugMode:(SensorsAnalyticsDebugMode)mode {
-    [self.debugModeManager handleDebugMode:mode];
 }
 
 - (void)showDebugModeWarning:(NSString *)message {
@@ -334,39 +323,40 @@ static NSString * const kSAExceptionModuleName = @"Exception";
     [self.encryptManager handleEncryptWithConfig:encryptConfig];
 }
 
+- (nullable NSDictionary *)encryptEvent:(nonnull NSDictionary *)event withKey:(nonnull SASecretKey *)key {
+    id encryptManager = [self moduleWithName:kSAEncryptModuleName];
+    if ([encryptManager conformsToProtocol:@protocol(SAEncryptModuleProtocol)] && [encryptManager conformsToProtocol:@protocol(SAModuleProtocol)]) {
+        return [encryptManager encryptEvent:event withKey:key];
+    }
+    return nil;
+}
+
+
 @end
 
 #pragma mark -
 
-@implementation SAModuleManager (Deeplink)
+@implementation SAModuleManager (DeepLink)
 
-- (id<SADeeplinkModuleProtocol>)deeplinkManager {
-    id module = [self moduleWithName:kSADeeplinkModuleName];
-    if ([module conformsToProtocol:@protocol(SADeeplinkModuleProtocol)] && [module conformsToProtocol:@protocol(SAModuleProtocol)]) {
-        id<SADeeplinkModuleProtocol, SAModuleProtocol> manager = module;
+- (id<SADeepLinkModuleProtocol>)deepLinkManager {
+    id module = [self moduleWithName:kSADeepLinkModuleName];
+    if ([module conformsToProtocol:@protocol(SADeepLinkModuleProtocol)] && [module conformsToProtocol:@protocol(SAModuleProtocol)]) {
+        id<SADeepLinkModuleProtocol, SAModuleProtocol> manager = module;
         return manager.isEnable ? manager : nil;
     }
     return nil;
 }
 
-- (void)setLinkHandlerCallback:(void (^ _Nonnull)(NSString * _Nullable, BOOL, NSInteger))linkHandlerCallback {
-    [self.deeplinkManager setLinkHandlerCallback:linkHandlerCallback];
-}
-
 - (NSDictionary *)latestUtmProperties {
-    return self.deeplinkManager.latestUtmProperties;
+    return self.deepLinkManager.latestUtmProperties;
 }
 
 - (NSDictionary *)utmProperties {
-    return self.deeplinkManager.utmProperties;
+    return self.deepLinkManager.utmProperties;
 }
 
 - (void)clearUtmProperties {
-    [self.deeplinkManager clearUtmProperties];
-}
-
-- (void)trackDeepLinkLaunchWithURL:(NSString *)url {
-    [self.deeplinkManager trackDeepLinkLaunchWithURL:url];
+    [self.deepLinkManager clearUtmProperties];
 }
 
 @end
@@ -448,7 +438,12 @@ static NSString * const kSAExceptionModuleName = @"Exception";
         if ([module conformsToProtocol:@protocol(SAJavaScriptBridgeModuleProtocol)] && [module respondsToSelector:@selector(javaScriptSource)] && [module conformsToProtocol:@protocol(SAModuleProtocol)]) {
             id<SAJavaScriptBridgeModuleProtocol, SAModuleProtocol>moduleObject = module;
             NSString *javaScriptSource = [moduleObject javaScriptSource];
-            moduleObject.isEnable && javaScriptSource.length > 0 ? [source appendString:javaScriptSource] : nil;
+            if (javaScriptSource.length <= 0) {
+                continue;
+            }
+            if ([moduleName isEqualToString:kSAJavaScriptBridgeModuleName] || moduleObject.isEnable) {
+                [source appendString:javaScriptSource];
+            }
         }
     }
     return source;

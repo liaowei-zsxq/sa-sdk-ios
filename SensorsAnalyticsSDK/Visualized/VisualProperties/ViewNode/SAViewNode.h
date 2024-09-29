@@ -3,7 +3,7 @@
 // SensorsAnalyticsSDK
 //
 // Created by 储强盛 on 2021/1/6.
-// Copyright © 2021 Sensors Data Co., Ltd. All rights reserved.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -40,10 +40,12 @@ NS_ASSUME_NONNULL_BEGIN
 /// 元素名称
 @property (nonatomic, copy, readonly) NSString *viewName;
 
-/// 同级同类元素序号
-/* -2：nextResponder 不是父视图或同类元素，比如 controller.view，涉及路径不带序号
- 其他：elementPath 包含序号
- */
+/**
+ *  同级同类元素序号
+ *
+ * -1：nextResponder 不是父视图或同类元素，比如 controller.view，涉及路径不带序号
+ * >= 0：elementPath 包含序号
+*/
 @property (nonatomic, assign) NSInteger index;
 
 #pragma mark view

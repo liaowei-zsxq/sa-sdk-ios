@@ -3,7 +3,7 @@
 // SensorsAnalyticsSDK
 //
 // Created by 张敏超🍎 on 2021/4/27.
-// Copyright © 2021 Sensors Data Co., Ltd. All rights reserved.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,13 +24,15 @@
 
 #import "SAAppViewScreenTracker.h"
 #import "SensorsAnalyticsSDK+Private.h"
-#import "UIViewController+AutoTrack.h"
+#import "UIViewController+SAAutoTrack.h"
 #import "SAAppLifecycle.h"
 #import "SAConstants+Private.h"
 #import "SAValidator.h"
 #import "SAAutoTrackUtils.h"
 #import "SAReferrerManager.h"
 #import "SAModuleManager.h"
+#import "SensorsAnalyticsSDK+SAAutoTrack.h"
+#import "SAUIProperties.h"
 
 @interface SAAppViewScreenTracker ()
 
@@ -58,8 +60,13 @@
     if ([self isViewControllerIgnored:viewController]) {
         return NO;
     }
-
-    return ![self isBlackListContainsViewController:viewController];
+    if ([self isBlackListContainsViewController:viewController]) {
+        return NO;
+    }
+    if ([viewController conformsToProtocol:@protocol(SAScreenAutoTracker)] && [viewController respondsToSelector:@selector(isIgnoredAutoTrackViewScreen)]) {
+        return ![(UIViewController<SAScreenAutoTracker> *)viewController isIgnoredAutoTrackViewScreen];
+    }
+    return YES;
 }
 
 #pragma mark - Public Methods
@@ -88,7 +95,7 @@
 }
 
 - (void)trackEventWithViewController:(UIViewController *)viewController properties:(NSDictionary<NSString *, id> *)properties {
-    if (!viewController) {
+    if (!viewController || ![viewController isKindOfClass:UIViewController.class]) {
         return;
     }
 
@@ -134,11 +141,11 @@
 - (NSDictionary *)buildWithViewController:(UIViewController *)viewController properties:(NSDictionary<NSString *, id> *)properties autoTrack:(BOOL)autoTrack {
     NSMutableDictionary *eventProperties = [[NSMutableDictionary alloc] init];
 
-    NSDictionary *autoTrackProperties = [SAAutoTrackUtils propertiesWithViewController:viewController];
+    NSDictionary *autoTrackProperties = [SAUIProperties propertiesWithViewController:viewController];
     [eventProperties addEntriesFromDictionary:autoTrackProperties];
 
     if (autoTrack) {
-        // App 通过 Deeplink 启动时第一个页面浏览事件会添加 utms 属性
+        // App 通过 DeepLink 启动时第一个页面浏览事件会添加 utms 属性
         // 只需要处理全埋点的页面浏览事件
         [eventProperties addEntriesFromDictionary:SAModuleManager.sharedInstance.utmProperties];
         [SAModuleManager.sharedInstance clearUtmProperties];

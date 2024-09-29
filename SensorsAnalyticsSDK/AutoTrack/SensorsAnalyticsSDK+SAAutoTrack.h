@@ -3,7 +3,7 @@
 // SensorsAnalyticsSDK
 //
 // Created by wenquan on 2021/4/2.
-// Copyright © 2021 Sensors Data Co., Ltd. All rights reserved.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,37 +23,6 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@protocol SAUIViewAutoTrackDelegate <NSObject>
-
-//UITableView
-@optional
-- (NSDictionary *)sensorsAnalytics_tableView:(UITableView *)tableView autoTrackPropertiesAtIndexPath:(NSIndexPath *)indexPath;
-
-//UICollectionView
-@optional
-- (NSDictionary *)sensorsAnalytics_collectionView:(UICollectionView *)collectionView autoTrackPropertiesAtIndexPath:(NSIndexPath *)indexPath;
-@end
-
-@interface UIImage (SensorsAnalytics)
-@property (nonatomic, copy) NSString* sensorsAnalyticsImageName;
-@end
-
-@interface UIView (SensorsAnalytics)
-/// viewID
-@property (nonatomic, copy) NSString* sensorsAnalyticsViewID;
-
-/// AutoTrack 时，是否忽略该 View
-@property (nonatomic, assign) BOOL sensorsAnalyticsIgnoreView;
-
-/// AutoTrack 发生在 SendAction 之前还是之后，默认是 SendAction 之前
-@property (nonatomic, assign) BOOL sensorsAnalyticsAutoTrackAfterSendAction;
-
-/// AutoTrack 时，View 的扩展属性
-@property (nonatomic, strong) NSDictionary* sensorsAnalyticsViewProperties;
-
-@property (nonatomic, weak, nullable) id<SAUIViewAutoTrackDelegate> sensorsAnalyticsDelegate;
-@end
-
 /**
  * @abstract
  * 自动追踪 (AutoTrack) 中，实现该 Protocal 的 Controller 对象可以通过接口向自动采集的事件中加入属性
@@ -70,7 +39,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 @protocol SAScreenAutoTracker <SAAutoTracker>
 
-@required
+@optional
+- (BOOL)isIgnoredAutoTrackViewScreen;
 - (NSString *)getScreenUrl;
 
 @end
@@ -186,14 +156,23 @@ NS_ASSUME_NONNULL_BEGIN
  *   https://sensorsdata.cn/manual/ios_sdk.html
  * 该功能默认关闭
  */
-- (void)enableAutoTrack:(SensorsAnalyticsAutoTrackEventType)eventType __attribute__((deprecated("已过时，请参考 SAConfigOptions 类的 autoTrackEventType")));
+- (void)enableAutoTrack:(SensorsAnalyticsAutoTrackEventType)eventType __attribute__((deprecated("已过时，请参考 SAConfigOptions 类的 autoTrackEventType"))) NS_EXTENSION_UNAVAILABLE("AutoTrack not supported for iOS extensions.");
 
 @end
 
 @interface SAConfigOptions (AutoTrack)
 
 ///开启自动采集页面浏览时长
-@property (nonatomic, assign) BOOL enableTrackPageLeave API_UNAVAILABLE(macos);
+@property (nonatomic, assign) BOOL enableTrackPageLeave API_UNAVAILABLE(macos) NS_EXTENSION_UNAVAILABLE("TrackPageLeave not supported for iOS extensions.");
+
+
+/// 是否开启子页面的页面浏览时长
+@property (nonatomic, assign) BOOL enableTrackChildPageLeave API_UNAVAILABLE(macos);
+
+
+/// 忽略特定页面的页面浏览时长采集
+/// @param viewControllers 需要忽略的页面控制器的类
+- (void)ignorePageLeave:(NSArray<Class>*)viewControllers;
 
 /// 是否自动采集子页面的页面浏览事件
 ///
@@ -211,7 +190,65 @@ NS_ASSUME_NONNULL_BEGIN
  *   https://sensorsdata.cn/manual/ios_sdk.html
  * 该功能默认关闭
  */
-@property (nonatomic) SensorsAnalyticsAutoTrackEventType autoTrackEventType API_UNAVAILABLE(macos);
+@property (nonatomic) SensorsAnalyticsAutoTrackEventType autoTrackEventType API_UNAVAILABLE(macos) NS_EXTENSION_UNAVAILABLE("AutoTrack not supported for iOS extensions.");
+
+@end
+
+
+/// Referrer category
+@interface SensorsAnalyticsSDK (SAReferrer)
+
+
+/**
+ * @abstract
+ * 获取 LastScreenUrl
+ *
+ * @return LastScreenUrl
+ */
+- (NSString *)getLastScreenUrl API_UNAVAILABLE(macos);
+
+/**
+ * @abstract
+ * 获取 currentScreenUrl
+ *
+ * @return currentScreenUrl
+ */
+- (NSString *)getCurrentScreenUrl API_UNAVAILABLE(macos);
+
+/**
+ * @abstract
+ * 获取 LastScreenTrackProperties
+ *
+ * @return LastScreenTrackProperties
+ */
+- (NSDictionary *)getLastScreenTrackProperties API_UNAVAILABLE(macos);
+
+/**
+ * @abstract
+ * App 退出或进到后台时清空 referrer，默认情况下不清空
+ */
+- (void)clearReferrerWhenAppEnd API_UNAVAILABLE(macos);
+
+@end
+
+/// ignore AppClick or AppViewScreen category
+@interface SensorsAnalyticsSDK (SAAutoTrackIgnore)
+
+/// ignore AppClick on an array of view classes
+/// - Parameter views: view classes
+- (void)ignoreAppClickOnViews:(NSArray<Class>*)views;
+
+/// ignore AppClick on an array of view controller classes
+/// - Parameter viewControllers: view controller classes
+- (void)ignoreAppClickOnViewControllers:(NSArray<Class>*)viewControllers;
+
+/// ignore AppViewScreen on an array of view controller classes
+/// - Parameter viewControllers: view controller classes
+- (void)ignoreAppViewScreenOnViewControllers:(NSArray<Class>*)viewControllers;
+
+/// ignore AppClick and AppViewScreen on an array of view controller classes
+/// - Parameter viewControllers: view controller classes
+- (void)ignoreAppClickAndViewScreenOnViewControllers:(NSArray<Class>*)viewControllers;
 
 @end
 

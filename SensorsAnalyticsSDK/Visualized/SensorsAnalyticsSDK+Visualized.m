@@ -3,7 +3,7 @@
 // SensorsAnalyticsSDK
 //
 // Created by 储强盛 on 2021/1/25.
-// Copyright © 2021 Sensors Data Co., Ltd. All rights reserved.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@
 @implementation SensorsAnalyticsSDK (Visualized)
 
 #pragma mark - VisualizedAutoTrack
-- (BOOL)isVisualizedAutoTrackEnabled {
+- (BOOL)isVisualizedAutoTrackEnabled NS_EXTENSION_UNAVAILABLE("VisualizedAutoTrack not supported for iOS extensions.") {
     return self.configOptions.enableVisualizedAutoTrack || self.configOptions.enableVisualizedProperties;
 }
 
@@ -42,7 +42,7 @@
 }
 
 #pragma mark - HeatMap
-- (BOOL)isHeatMapEnabled {
+- (BOOL)isHeatMapEnabled NS_EXTENSION_UNAVAILABLE("HeatMap not supported for iOS extensions.") {
     return self.configOptions.enableHeatMap;
 }
 

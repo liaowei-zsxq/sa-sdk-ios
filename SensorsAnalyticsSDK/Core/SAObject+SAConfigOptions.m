@@ -3,7 +3,7 @@
 // SensorsAnalyticsSDK
 //
 // Created by 张敏超🍎 on 2020/6/30.
-// Copyright © 2020 Sensors Data Co., Ltd. All rights reserved.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -39,57 +39,6 @@
     }
 #endif
     return [SensorsAnalyticsSDK sdkInstance].configOptions.maxCacheSize;
-}
-
-@end
-
-
-#pragma mark -
-
-@implementation SAEventFlush (SAConfigOptions)
-
-- (BOOL)isDebugMode {
-    return SAModuleManager.sharedInstance.debugMode != SensorsAnalyticsDebugOff;
-}
-
-- (NSURL *)serverURL {
-    return [SensorsAnalyticsSDK sdkInstance].network.serverURL;
-}
-
-- (BOOL)flushBeforeEnterBackground {
-    return SensorsAnalyticsSDK.sdkInstance.configOptions.flushBeforeEnterBackground;
-}
-
-- (BOOL)enableEncrypt {
-#if TARGET_OS_IOS && __has_include("SAConfigOptions+Encrypt.h")
-    return [SensorsAnalyticsSDK sdkInstance].configOptions.enableEncrypt;
-#else
-    return NO;
-#endif
-}
-
-
-- (NSString *)cookie {
-    return [[SensorsAnalyticsSDK sdkInstance].network cookieWithDecoded:NO];
-}
-
-@end
-
-
-#pragma mark -
-
-@implementation SAEventTracker (SAConfigOptions)
-
-- (BOOL)isDebugMode {
-    return SAModuleManager.sharedInstance.debugMode != SensorsAnalyticsDebugOff;
-}
-
-- (SensorsAnalyticsNetworkType)networkTypePolicy {
-    return SensorsAnalyticsSDK.sdkInstance.configOptions.flushNetworkPolicy;
-}
-
-- (NSInteger)flushBulkSize {
-    return SensorsAnalyticsSDK.sdkInstance.configOptions.flushBulkSize;
 }
 
 @end

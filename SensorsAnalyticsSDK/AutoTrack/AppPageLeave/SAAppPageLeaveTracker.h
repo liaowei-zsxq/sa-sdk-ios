@@ -3,7 +3,7 @@
 // SensorsAnalyticsSDK
 //
 // Created by 陈玉国 on 2021/7/19.
-// Copyright © 2021 Sensors Data Co., Ltd. All rights reserved.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,15 +23,21 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+@interface SAPageLeaveObject : NSObject
+
+@property (nonatomic, weak) UIViewController *viewController;
+@property (nonatomic, assign) NSTimeInterval timestamp;
+@property (nonatomic, copy) NSString *referrerURL;
+
+@end
+
 @interface SAAppPageLeaveTracker : SAAppTracker
 
-@property (nonatomic, strong) NSMutableDictionary<NSString *, NSMutableDictionary *> *timestamp;
+@property (nonatomic, strong) NSMutableDictionary<NSString *, SAPageLeaveObject *> *pageLeaveObjects;
 
 - (void)trackEvents;
 - (void)trackPageEnter:(UIViewController *)viewController;
 - (void)trackPageLeave:(UIViewController *)viewController;
-- (NSDictionary *)propertiesWithViewController:(UIViewController *)viewController;
-- (BOOL)shouldTrackViewController:(UIViewController *)viewController;
 
 @end
 

@@ -3,7 +3,7 @@
 // SensorsAnalyticsSDK
 //
 // Created by 张敏超🍎 on 2020/6/18.
-// Copyright © 2020 Sensors Data Co., Ltd. All rights reserved.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,10 +17,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-
-#if ! __has_feature(objc_arc)
-#error This file must be compiled with ARC. Either turn on ARC for the project or use -fobjc-arc flag on this file.
-#endif
 
 #import <Foundation/Foundation.h>
 
@@ -39,8 +35,9 @@ typedef NS_ENUM(int, SAEventRecordStatus) {
 
 @property (nonatomic) SAEventRecordStatus status;
 @property (nonatomic, getter=isEncrypted) BOOL encrypted;
+@property (nonatomic, assign) BOOL isInstantEvent;
 
-@property (nonatomic, copy, readonly) NSDictionary *event;
+@property (nonatomic, strong) NSMutableDictionary *event;
 
 /// 通过 event 初始化方法
 /// 主要是在 track 事件的时候使用
@@ -65,7 +62,7 @@ typedef NS_ENUM(int, SAEventRecordStatus) {
 - (void)setSecretObject:(NSDictionary *)obj;
 
 - (void)removePayload;
-- (BOOL)mergeSameEKeyRecord:(SAEventRecord *)record;
+- (BOOL)mergeSameEKeyPayloadWithRecord:(SAEventRecord *)record;
 
 @end
 

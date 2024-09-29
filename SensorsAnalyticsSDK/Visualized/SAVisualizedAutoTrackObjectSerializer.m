@@ -1,21 +1,21 @@
 //
-//  SAObjectSerializer.m
-//  SensorsAnalyticsSDK
+// SAObjectSerializer.m
+// SensorsAnalyticsSDK
 //
-//  Created by 雨晗 on 1/18/16.
-//  Copyright © 2015-2019 Sensors Data Inc. All rights reserved.
+// Created by 雨晗 on 1/18/16.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
-//  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the License is distributed on an "AS IS" BASIS,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the License for the specific language governing permissions and
-//  limitations under the License.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 
 #if ! __has_feature(objc_arc)
@@ -37,6 +37,7 @@
 #import "SAVisualizedObjectSerializerManager.h"
 #import "SAJavaScriptBridgeManager.h"
 #import "SAVisualizedManager.h"
+#import "SAConstants+Private.h"
 
 @interface SAVisualizedAutoTrackObjectSerializer ()
 @end
@@ -94,15 +95,24 @@
     if (classDescription) {
         // 遍历自身和父类的所需的属性及类型，合并为当前类所有属性
         for (SAPropertyDescription *propertyDescription in [classDescription propertyDescriptions]) {
-            //  根据是否符号要求（是否显示等）构建属性，通过 KVC 和 NSInvocation 动态调用获取描述信息
+            // 根据是否符号要求（是否显示等）构建属性，通过 KVC 和 NSInvocation 动态调用获取描述信息
             id propertyValue = [self propertyValueForObject:object withPropertyDescription:propertyDescription context:context];         // $递增作为元素 id
             propertyValues[propertyDescription.key] = propertyValue;
         }
     }
 
+    if (NSClassFromString(@"FlutterView") && [object isKindOfClass:NSClassFromString(@"FlutterView")]) {
+        UIView *flutterView = (UIView *)object;
+        [[SAVisualizedObjectSerializerManager sharedInstance] enterWebViewPageWithView:flutterView];
+
+        [self checkFlutterElementInfoWithView:flutterView];
+    }
     if ([object isKindOfClass:WKWebView.class]) {
         // 针对 WKWebView 数据检查
         WKWebView *webView = (WKWebView *)object;
+
+        [[SAVisualizedObjectSerializerManager sharedInstance] enterWebViewPageWithView:webView];
+
         [self checkWKWebViewInfoWithWebView:webView];
     } else {
         SEL isWebViewSEL = NSSelectorFromString(@"isWebViewWithObject:");
@@ -111,7 +121,7 @@
         if ([self respondsToSelector:isWebViewSEL] && [self performSelector:isWebViewSEL withObject:object]) {
 #pragma clang diagnostic pop
             // 暂不支持非 WKWebView，添加弹框
-            [self addNotWKWebViewAlertInfo];
+            [[SAVisualizedObjectSerializerManager sharedInstance] enterWebViewPageWithView:nil];
         }
     }
 
@@ -248,60 +258,61 @@ propertyDescription:(SAPropertyDescription *)propertyDescription
 }
 
 #pragma mark webview
-
-/// 添加弹框信息
-- (void)addNotWKWebViewAlertInfo {
-    [[SAVisualizedObjectSerializerManager sharedInstance] enterWebViewPageWithWebInfo:nil];
-
-    NSMutableDictionary *alertInfo = [NSMutableDictionary dictionary];
-    alertInfo[@"title"] = @"当前页面无法进行可视化全埋点";
-    alertInfo[@"message"] = @"此页面不是 WKWebView，iOS App 内嵌 H5 可视化全埋点，只支持 WKWebView";
-    alertInfo[@"link_text"] = @"配置文档";
-    alertInfo[@"link_url"] = @"https://manual.sensorsdata.cn/sa/latest/enable_visualized_autotrack-7548675.html";
-    if ([SAVisualizedManager defaultManager].visualizedType == SensorsAnalyticsVisualizedTypeHeatMap) {
-        alertInfo[@"title"] = @"当前页面无法进行点击分析";
-        alertInfo[@"message"] = @"此页面包含 UIWebView，iOS App 内嵌 H5 点击分析，只支持 WKWebView";
-        alertInfo[@"link_url"] = @"https://manual.sensorsdata.cn/sa/latest/app-16286049.html";
-    }
-    [[SAVisualizedObjectSerializerManager sharedInstance] registWebAlertInfos:@[alertInfo]];
+- (void)checkFlutterElementInfoWithView:(UIView *)flutterView {
+    // 延时检测是否 Flutter SDK 版本是否正确
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        // 延迟判断是否存在 Flutter SDK 发送数据
+        SAVisualizedPageInfo *currentWebPageInfo = [[SAVisualizedObjectSerializerManager sharedInstance] queryPageInfoWithType:SAVisualizedPageTypeFlutter];
+        if (currentWebPageInfo.pageType != SAVisualizedPageTypeFlutter) {
+            return;
+        }
+        // 已成功注入页面信息
+        if (currentWebPageInfo.screenName.length > 0 || currentWebPageInfo.elementSources.count > 0) {
+            return;
+        }
+        NSMutableDictionary *alertInfo = [NSMutableDictionary dictionary];
+        alertInfo[@"title"] = SALocalizedString(@"SAVisualizedPageErrorTitle");
+        alertInfo[@"message"] = SALocalizedString(@"SAVisualizedFlutterPageErrorMessage");
+        alertInfo[@"link_text"] =  SALocalizedString(@"SAVisualizedConfigurationDocument");
+        alertInfo[@"link_url"] = @"https://manual.sensorsdata.cn/sa/latest/flutter-22257963.html";
+        if ([SAVisualizedManager defaultManager].visualizedType == SensorsAnalyticsVisualizedTypeHeatMap) {
+            alertInfo[@"title"] = SALocalizedString(@"SAAppClicksAnalyticsPageErrorTitle");
+        }
+        [currentWebPageInfo registWebAlertInfos:@[alertInfo]];
+    });
 }
 
 /// 检查 WKWebView 相关信息
 - (void)checkWKWebViewInfoWithWebView:(WKWebView *)webView {
-    SAVisualizedWebPageInfo *webPageInfo = [[SAVisualizedObjectSerializerManager sharedInstance] readWebPageInfoWithWebView:webView];
+    SAVisualizedPageInfo *webPageInfo = [[SAVisualizedObjectSerializerManager sharedInstance] readWebPageInfoWithWebView:webView];
 
-    // H5 弹框信息
-    if (webPageInfo.alertSources) {
-        [[SAVisualizedObjectSerializerManager sharedInstance] registWebAlertInfos:webPageInfo.alertSources];
-    }
-    
-    // H5 页面元素信息
-    if (webPageInfo) {
-        [[SAVisualizedObjectSerializerManager sharedInstance] enterWebViewPageWithWebInfo:webPageInfo];
+    // 存在有效 web 元素数据
+    if (webPageInfo.url || (webPageInfo.elementSources.count > 0 && webPageInfo.pageType == SAVisualizedPageTypeWeb)) {
+        return;
     }
 
     NSMutableString *javaScriptSource = [NSMutableString string];
     // 如果未接收到 H5 页面元素信息，异常场景处理
-    if (!webPageInfo) {
-        // 当前 WKWebView 是否注入可视化全埋点 Bridge 标记
-        NSArray<WKUserScript *> *userScripts = webView.configuration.userContentController.userScripts;
-        // 防止重复注入标记（js 发送数据，是异步的，防止 sensorsdata_visualized_mode 已经注入完成，但是尚未接收到 js 数据）
-        __block BOOL isContainVisualized = NO;
-        [userScripts enumerateObjectsUsingBlock:^(WKUserScript *_Nonnull obj, NSUInteger idx, BOOL *_Nonnull stop) {
-            if ([obj.source containsString:kSAJSBridgeVisualizedMode]) {
-                isContainVisualized = YES;
-                *stop = YES;
-            }
-        }];
-
-        if (isContainVisualized) {
-            // 只有包含可视化全埋点 Bridge 标记，并且未接收到 JS 页面信息，需要检测 JS SDK 集成情况
-            [self checkJSSDKIntegrationWithWebView:webView];
-        } else {
-            // 注入 bridge 属性值，标记当前处于可视化全埋点扫码状态
-            NSString *visualizedMode = [SAJavaScriptBridgeBuilder buildVisualBridgeWithVisualizedMode:YES];
-            [javaScriptSource appendString:visualizedMode];
+    // 当前 WKWebView 是否注入可视化全埋点 Bridge 标记
+    NSArray<WKUserScript *> *userScripts = webView.configuration.userContentController.userScripts;
+    // 防止重复注入标记（js 发送数据，是异步的，防止 sensorsdata_visualized_mode 已经注入完成，但是尚未接收到 js 数据）
+    __block BOOL isContainVisualized = NO;
+    [userScripts enumerateObjectsUsingBlock:^(WKUserScript *_Nonnull obj, NSUInteger idx, BOOL *_Nonnull stop) {
+        // 已注入可视化扫码状态标记
+        if ([obj.source containsString:kSAJSBridgeVisualizedMode]) {
+            isContainVisualized = YES;
+            *stop = YES;
         }
+    }];
+
+    if (isContainVisualized) {
+        // 只有包含可视化全埋点 Bridge 标记，并且未接收到 JS 页面信息，需要检测 JS SDK 集成情况
+        [self checkJSSDKIntegrationWithWebView:webView];
+    } else {
+        // 注入 bridge 属性值，标记当前处于可视化全埋点扫码状态
+        NSString *visualizedMode = [SAJavaScriptBridgeBuilder buildVisualBridgeWithVisualizedMode:YES];
+        [javaScriptSource appendString:visualizedMode];
+
     }
 
     /* 主动通知 JS SDK 发送数据：
@@ -326,8 +337,8 @@ propertyDescription:(SAPropertyDescription *)propertyDescription
     // 延时检测是否集成 JS SDK（JS SDK 可能存在延时动态加载）
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         // 延迟判断是否存在 js 发送数据
-        SAVisualizedWebPageInfo *currentWebPageInfo = [[SAVisualizedObjectSerializerManager sharedInstance] readWebPageInfoWithWebView:webView];
-        if (currentWebPageInfo) {
+        SAVisualizedPageInfo *currentWebPageInfo = [[SAVisualizedObjectSerializerManager sharedInstance] readWebPageInfoWithWebView:webView];
+        if (currentWebPageInfo.url) {
             return;
         }
         // 注入了 bridge 但是未接收到数据
@@ -341,12 +352,12 @@ propertyDescription:(SAPropertyDescription *)propertyDescription
             // js 环境未定义此方法，可能是未集成 JS SDK 或者 JS SDK 版本过低
             if (exceptionMessage && [exceptionMessage containsString:@"undefined is not a function"]) {
                 NSMutableDictionary *alertInfo = [NSMutableDictionary dictionary];
-                alertInfo[@"title"] = @"当前页面无法进行可视化全埋点";
-                alertInfo[@"message"] = @"此页面未集成 Web JS SDK 或者 Web JS SDK 版本过低，请集成最新版 Web JS SDK";
-                alertInfo[@"link_text"] = @"配置文档";
+                alertInfo[@"title"] = SALocalizedString(@"SAVisualizedPageErrorTitle");
+                alertInfo[@"message"] = SALocalizedString(@"SAVisualizedJSError");
+                alertInfo[@"link_text"] = SALocalizedString(@"SAVisualizedConfigurationDocument");
                 alertInfo[@"link_url"] = @"https://manual.sensorsdata.cn/sa/latest/tech_sdk_client_web_use-7548173.html";
                 if ([SAVisualizedManager defaultManager].visualizedType == SensorsAnalyticsVisualizedTypeHeatMap) {
-                    alertInfo[@"title"] = @"当前页面无法进行点击分析";
+                    alertInfo[@"title"] = SALocalizedString(@"SAAppClicksAnalyticsPageErrorTitle");
                 }
                 NSMutableDictionary *alertInfoMessage = [@{ @"callType": @"app_alert", @"data": @[alertInfo] } mutableCopy];
                 [[SAVisualizedObjectSerializerManager sharedInstance] saveVisualizedWebPageInfoWithWebView:webView webPageInfo:alertInfoMessage];

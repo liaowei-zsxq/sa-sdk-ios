@@ -3,7 +3,7 @@
 // SensorsAnalyticsSDK
 //
 // Created by 储强盛 on 2021/3/22.
-// Copyright © 2021 Sensors Data Co., Ltd. All rights reserved.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,7 +27,6 @@
 #import "SAEventIdentifier.h"
 #import "SALog.h"
 
-NSString * const kSAWebVisualEventName = @"sensorsdata_web_visual_eventName";
 
 @interface SAVisualizedEventCheck()
 @property (nonatomic, strong) SAVisualPropertiesConfigSources *configSources;
@@ -79,7 +78,7 @@ NSString * const kSAWebVisualEventName = @"sensorsdata_web_visual_eventName";
         if (!config.event) {
             continue;
         }
-        SALogDebug(@"调试模式，匹配到可视化全埋点事件 %@", config.eventName);
+        SALogDebug(@"Debug mode, matching to visualized event %@", config.eventName);
         [self cacheVisualEvent:config.eventName eventInfo:trackEventInfo];
     }
 }
@@ -103,7 +102,7 @@ NSString * const kSAWebVisualEventName = @"sensorsdata_web_visual_eventName";
         return;
     }
     // 移除标记
-    eventIdentifier.properties[kSAWebVisualEventName] = nil;
+    [eventIdentifier.properties removeObjectForKey:kSAWebVisualEventName];
 
     // 缓存 H5 可视化全埋点事件
     for (NSString *eventName in webVisualEventNames) {

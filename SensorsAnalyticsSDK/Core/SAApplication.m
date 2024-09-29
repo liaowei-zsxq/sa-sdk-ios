@@ -1,9 +1,9 @@
 //
-//  SAApplication.m
-//  SensorsAnalyticsSDK
+// SAApplication.m
+// SensorsAnalyticsSDK
 //
-//  Created by 陈玉国 on 2021/9/8.
-// Copyright © 2021 Sensors Data Co., Ltd. All rights reserved.
+// Created by 陈玉国 on 2021/9/8.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,14 +24,14 @@
 
 #import "SAApplication.h"
 
-#if TARGET_OS_IOS
+#if TARGET_OS_IOS || TARGET_OS_TV
 #import <UIKit/UIKit.h>
 #endif
 
 @implementation SAApplication
 
 + (id)sharedApplication {
-#if TARGET_OS_IOS
+#if TARGET_OS_IOS || TARGET_OS_TV
     Class applicationClass = NSClassFromString(@"UIApplication");
     if (!applicationClass) {
         return nil;

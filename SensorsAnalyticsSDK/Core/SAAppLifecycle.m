@@ -3,7 +3,7 @@
 // SensorsAnalyticsSDK
 //
 // Created by wenquan on 2021/4/1.
-// Copyright © 2021 Sensors Data Co., Ltd. All rights reserved.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@
 #import "SALog.h"
 #import "SAApplication.h"
 
-#if TARGET_OS_IOS
+#if TARGET_OS_IOS || TARGET_OS_TV
 #import <UIKit/UIKit.h>
 #elif TARGET_OS_OSX
 #import <AppKit/AppKit.h>
@@ -122,7 +122,7 @@ NSString * const kSAAppLifecycleOldStateKey = @"old";
 
     // 监听 App 启动或结束事件
     NSNotificationCenter *notificationCenter = [NSNotificationCenter defaultCenter];
-#if TARGET_OS_IOS
+#if TARGET_OS_IOS || TARGET_OS_TV
     [notificationCenter addObserver:self
                            selector:@selector(applicationDidBecomeActive:)
                                name:UIApplicationDidBecomeActiveNotification
@@ -178,7 +178,7 @@ NSString * const kSAAppLifecycleOldStateKey = @"old";
 - (void)applicationDidBecomeActive:(NSNotification *)notification {
     SALogDebug(@"application did become active");
 
-#if TARGET_OS_IOS
+#if TARGET_OS_IOS  || TARGET_OS_TV
     // 防止主动触发 UIApplicationDidBecomeActiveNotification
     if (![notification.object isKindOfClass:[UIApplication class]]) {
         return;
@@ -202,7 +202,7 @@ NSString * const kSAAppLifecycleOldStateKey = @"old";
     self.state = SAAppLifecycleStateStart;
 }
 
-#if TARGET_OS_IOS
+#if TARGET_OS_IOS || TARGET_OS_TV
 - (void)applicationDidEnterBackground:(NSNotification *)notification {
     SALogDebug(@"application did enter background");
 

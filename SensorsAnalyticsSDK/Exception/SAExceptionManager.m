@@ -3,7 +3,7 @@
 // SensorsAnalyticsSDK
 //
 // Created by 张敏超🍎 on 2021/6/4.
-// Copyright © 2021 Sensors Data Co., Ltd. All rights reserved.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -69,7 +69,7 @@ static NSString * const kSAAppCrashedReason = @"app_crashed_reason";
     }
 }
 
-- (void)setConfigOptions:(SAConfigOptions *)configOptions {
+- (void)setConfigOptions:(SAConfigOptions *)configOptions NS_EXTENSION_UNAVAILABLE("Exception not supported for iOS extensions.") {
     _configOptions = configOptions;
     self.enable = configOptions.enableTrackAppCrash;
 }
@@ -149,9 +149,9 @@ static void SAHandleException(NSException *exception) {
             properties[kSAAppCrashedReason] = [NSString stringWithFormat:@"%@ %@", exception.reason, [NSThread.callStackSymbols componentsJoinedByString:@"\n"]];
         }
         SAPresetEventObject *object = [[SAPresetEventObject alloc] initWithEventId:kSAEventNameAppCrashed];
-        [SensorsAnalyticsSDK.sharedInstance asyncTrackEventObject:object properties:properties];
 
-        //TODO: 去除对 SAModuleManager 的引用
+        [SensorsAnalyticsSDK.sharedInstance trackEventObject:object properties:properties];
+
         //触发页面浏览时长事件
         [[SAModuleManager sharedInstance] trackPageLeaveWhenCrashed];
 

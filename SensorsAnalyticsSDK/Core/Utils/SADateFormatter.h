@@ -3,7 +3,7 @@
 // SensorsAnalyticsSDK
 //
 // Created by 彭远洋 on 2019/12/23.
-// Copyright © 2019 SensorsData. All rights reserved.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,10 +17,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-
-#if ! __has_feature(objc_arc)
-#error This file must be compiled with ARC. Either turn on ARC for the project or use -fobjc-arc flag on this file.
-#endif
 
 #import <Foundation/Foundation.h>
 

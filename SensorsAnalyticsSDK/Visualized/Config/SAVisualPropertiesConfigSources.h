@@ -3,7 +3,7 @@
 // SensorsAnalyticsSDK
 //
 // Created by 储强盛 on 2021/1/7.
-// Copyright © 2021 Sensors Data Co., Ltd. All rights reserved.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, assign, readonly, getter=isValid) BOOL valid;
 
 /// 配置版本
-@property (nonatomic, assign, readonly) NSString *configVersion;
+@property (nonatomic, copy, readonly) NSString *configVersion;
 
 /// 配置原始 json
 @property (nonatomic, copy, readonly) NSDictionary *originalResponse;
@@ -54,7 +54,7 @@ NS_ASSUME_NONNULL_BEGIN
 /// 禁用默认初始化
 - (instancetype)init NS_UNAVAILABLE;
 /// 禁用默认初始化
-- (instancetype)new NS_UNAVAILABLE;
++ (instancetype)new NS_UNAVAILABLE;
 
 /// 加载配置
 - (void)loadConfig;

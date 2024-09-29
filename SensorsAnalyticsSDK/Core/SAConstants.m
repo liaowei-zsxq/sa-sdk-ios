@@ -1,21 +1,21 @@
 //
-//  SAConstants.m
-//  SensorsAnalyticsSDK
+// SAConstants.m
+// SensorsAnalyticsSDK
 //
-//  Created by 向作为 on 2018/8/9.
-//  Copyright © 2015-2020 Sensors Data Co., Ltd. All rights reserved.
+// Created by 向作为 on 2018/8/9.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
-//  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the License is distributed on an "AS IS" BASIS,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the License for the specific language governing permissions and
-//  limitations under the License.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 
 #if ! __has_feature(objc_arc)
@@ -24,6 +24,8 @@
 
 #import "SAConstants.h"
 #import "SAConstants+Private.h"
+#import "SensorsAnalyticsSDK+Private.h"
+#import "SACoreResources.h"
 
 #pragma mark - Track Timer
 NSString *const kSAEventIdSuffix = @"_SATimer";
@@ -33,6 +35,7 @@ NSString * const kSAEventTime = @"time";
 NSString * const kSAEventTrackId = @"_track_id";
 NSString * const kSAEventName = @"event";
 NSString * const kSAEventDistinctId = @"distinct_id";
+NSString * const kSAEventOriginalId = @"original_id";
 NSString * const kSAEventProperties = @"properties";
 NSString * const kSAEventType = @"type";
 NSString * const kSAEventLib = @"lib";
@@ -44,10 +47,8 @@ NSString * const kSAEventAnonymousId = @"anonymous_id";
 NSString * const kSAEventIdentities = @"identities";
 
 #pragma mark - Item
-NSString * const SA_EVENT_ITEM_TYPE = @"item_type";
-NSString * const SA_EVENT_ITEM_ID = @"item_id";
-NSString * const SA_EVENT_ITEM_SET = @"item_set";
-NSString * const SA_EVENT_ITEM_DELETE = @"item_delete";
+NSString * const kSAEventItemSet = @"item_set";
+NSString * const kSAEventItemDelete = @"item_delete";
 
 #pragma mark - event name
 // App 启动或激活
@@ -76,9 +77,9 @@ NSString * const kSAEventNameBind = @"$BindID";
 NSString * const kSAEventNameUnbind = @"$UnbindID";
 
 #pragma mark - app install property
-NSString * const SA_EVENT_PROPERTY_APP_INSTALL_SOURCE = @"$ios_install_source";
-NSString * const SA_EVENT_PROPERTY_APP_INSTALL_DISABLE_CALLBACK = @"$ios_install_disable_callback";
-NSString * const SA_EVENT_PROPERTY_APP_INSTALL_FIRST_VISIT_TIME = @"$first_visit_time";
+NSString * const kSAEventPropertyInstallSource = @"$ios_install_source";
+NSString * const kSAEventPropertyInstallDisableCallback = @"$ios_install_disable_callback";
+NSString * const kSAEventPropertyAppInstallFirstVisitTime = @"$first_visit_time";
 #pragma mark - autoTrack property
 // App 浏览页面 Url
 NSString * const kSAEventPropertyScreenUrl = @"$url";
@@ -88,7 +89,6 @@ NSString * const kSAEventPropertyElementId = @"$element_id";
 NSString * const kSAEventPropertyScreenName = @"$screen_name";
 NSString * const kSAEventPropertyTitle = @"$title";
 NSString * const kSAEventPropertyElementPosition = @"$element_position";
-NSString * const kSAEventPropertyElementSelector = @"$element_selector";
 
 NSString * const kSAEeventPropertyReferrerTitle = @"$referrer_title";
 
@@ -117,21 +117,17 @@ NSString * const kSAEventTypeBind = @"track_id_bind";
 NSString * const kSAEventTypeUnbind = @"track_id_unbind";
 
 #pragma mark - profile
-NSString * const SA_PROFILE_SET = @"profile_set";
-NSString * const SA_PROFILE_SET_ONCE = @"profile_set_once";
-NSString * const SA_PROFILE_UNSET = @"profile_unset";
-NSString * const SA_PROFILE_DELETE = @"profile_delete";
-NSString * const SA_PROFILE_APPEND = @"profile_append";
-NSString * const SA_PROFILE_INCREMENT = @"profile_increment";
-
-#pragma mark - NSUserDefaults
-NSString * const SA_HAS_TRACK_INSTALLATION = @"HasTrackInstallation";
-NSString * const SA_HAS_TRACK_INSTALLATION_DISABLE_CALLBACK = @"HasTrackInstallationWithDisableCallback";
+NSString * const kSAProfileSet = @"profile_set";
+NSString * const kSAProfileSetOnce = @"profile_set_once";
+NSString * const kSAProfileUnset = @"profile_unset";
+NSString * const kSAProfileDelete = @"profile_delete";
+NSString * const kSAProfileAppend = @"profile_append";
+NSString * const kSAProfileIncrement = @"profile_increment";
 
 #pragma mark - bridge name
 NSString * const SA_SCRIPT_MESSAGE_HANDLER_NAME = @"sensorsdataNativeTracker";
 
-NSSet* sensorsdata_reserved_properties() {
+NSSet* sensorsdata_reserved_properties(void) {
     return [NSSet setWithObjects:@"date", @"datetime", @"distinct_id", @"event", @"events", @"first_id", @"id", @"original_id", @"properties", @"second_id", @"time", @"user_id", @"users", nil];
 }
 
@@ -147,6 +143,20 @@ void sensorsdata_dispatch_safe_sync(dispatch_queue_t queue,DISPATCH_NOESCAPE dis
     }
 }
 
+#pragma mark - Localization
+NSString* sensorsdata_localized_string(NSString* key, NSString* value) {
+    static NSDictionary *languageResources = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+
+    // 加载语言资源
+    languageResources = [SACoreResources defaultLanguageResources];
+
+    });
+
+    return languageResources[key] ?: value;
+}
+
 #pragma mark - SF related notifications
 NSNotificationName const SA_TRACK_EVENT_NOTIFICATION = @"SensorsAnalyticsTrackEventNotification";
 NSNotificationName const SA_TRACK_LOGIN_NOTIFICATION = @"SensorsAnalyticsTrackLoginNotification";
@@ -154,6 +164,7 @@ NSNotificationName const SA_TRACK_LOGOUT_NOTIFICATION = @"SensorsAnalyticsTrackL
 NSNotificationName const SA_TRACK_IDENTIFY_NOTIFICATION = @"SensorsAnalyticsTrackIdentifyNotification";
 NSNotificationName const SA_TRACK_RESETANONYMOUSID_NOTIFICATION = @"SensorsAnalyticsTrackResetAnonymousIdNotification";
 NSNotificationName const SA_TRACK_EVENT_H5_NOTIFICATION = @"SensorsAnalyticsTrackEventFromH5Notification";
+NSNotificationName const SA_TRACK_Set_Server_URL_NOTIFICATION = @"SensorsAnalyticsSetServerUrlNotification";
 
 #pragma mark - ABTest related notifications
 NSNotificationName const SA_H5_BRIDGE_NOTIFICATION = @"SensorsAnalyticsRegisterJavaScriptBridgeNotification";
@@ -164,11 +175,63 @@ NSNotificationName const SA_H5_MESSAGE_NOTIFICATION = @"SensorsAnalyticsMessageF
 // 远程配置更新
 NSNotificationName const SA_REMOTE_CONFIG_MODEL_CHANGED_NOTIFICATION = @"cn.sensorsdata.SA_REMOTE_CONFIG_MODEL_CHANGED_NOTIFICATION";
 
-// App 内嵌 H5 接收可视化相关 H5 页面元素信息
-NSNotificationName const SA_VISUALIZED_H5_MESSAGE_NOTIFICATION = @"SensorsAnalyticsVisualizedMessageFromH5Notification";
+// 接收 App 内嵌 H5 可视化相关页面元素信息
+NSNotificationName const kSAVisualizedMessageFromH5Notification = @"SensorsAnalyticsVisualizedMessageFromH5Notification";
 
 //page leave
-NSString * const kSAPageLeaveTimestamp = @"timestamp";
-NSString * const kSAPageLeaveAutoTrackProperties = @"properties";
 NSString * const kSAEventDurationProperty = @"event_duration";
 NSString * const kSAEventNameAppPageLeave = @"$AppPageLeave";
+
+//event name、property key、value max length
+NSInteger kSAEventNameMaxLength = 100;
+NSInteger kSAPropertyValueMaxLength = 8192;
+
+#pragma mark - SA Visualized
+/// 埋点校验中，$WebClick 匹配可视化全埋点的事件名（集合）
+NSString * const kSAWebVisualEventName = @"sensorsdata_web_visual_eventName";
+
+/// App 内嵌 H5 的 Web 事件，属性配置中，需要 App 采集的属性
+NSString * const kSAAppVisualProperties = @"sensorsdata_app_visual_properties";
+
+/// App 内嵌 H5 的 Native 事件，属性配置中，需要 web 采集的属性
+NSString * const kSAWebVisualProperties = @"sensorsdata_js_visual_properties";
+
+SALimitKey const SALimitKeyIDFA = @"SALimitKeyIDFA";
+SALimitKey const SALimitKeyIDFV = @"SALimitKeyIDFV";
+SALimitKey const SALimitKeyCarrier = @"SALimitKeyCarrier";
+
+
+/// is instant event
+NSString * const kSAInstantEventKey = @"is_instant_event";
+NSString * const kAdsEventKey = @"is_ads_event";
+
+//flush related keys
+NSString * const kSAEncryptRecordKeyEKey = @"ekey";
+NSString * const kSAEncryptRecordKeyPayloads = @"payloads";
+NSString * const kSAEncryptRecordKeyPayload = @"payload";
+NSString * const kSAEncryptRecordKeyFlushTime = @"flush_time";
+NSString * const kSAEncryptRecordKeyPKV = @"pkv";
+NSString * const kSAFlushBodyKeyData = @"data_list";
+NSString * const kSAFlushBodyKeyGzip = @"gzip";
+NSInteger const kSAFlushGzipCodePlainText = 1;
+NSInteger const kSAFlushGzipCodeEncrypt = 9;
+NSInteger const kSAFlushGzipCodeTransportEncrypt = 13;
+
+//remote config
+NSString * const kSDKConfigKey = @"SASDKConfig";
+NSString * const kRequestRemoteConfigRandomTimeKey = @"SARequestRemoteConfigRandomTime";
+NSString * const kRandomTimeKey = @"randomTime";
+NSString * const kStartDeviceTimeKey = @"startDeviceTime";
+NSString * const kSARemoteConfigSupportTransportEncryptKey = @"supportTransportEncrypt";
+NSString * const kSARemoteConfigConfigsKey = @"configs";
+
+//SAT Remarketing
+NSString * const kSAAppInteractEventTimeIntervalKey = @"appInteract_timestamp";
+NSString * const kSAAppInteractEventName = @"$AppInteract";
+NSString * const kSAHasTrackInstallation = @"HasTrackInstallation";
+NSString * const kSAHasTrackInstallationDisableCallback = @"HasTrackInstallationWithDisableCallback";
+NSString * const kSAEventPropertyHasInstalledApp = @"$sat_has_installed_app";
+NSString * const kSAEventPropertyAwakeFromDeeplink = @"$sat_awake_from_deeplink";
+
+//ID3
+NSString * const kSAIdentitiesAnonymousId = @"$identity_anonymous_id";

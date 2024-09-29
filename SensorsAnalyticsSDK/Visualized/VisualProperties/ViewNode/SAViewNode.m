@@ -3,7 +3,7 @@
 // SensorsAnalyticsSDK
 //
 // Created by 储强盛 on 2021/1/6.
-// Copyright © 2021 Sensors Data Co., Ltd. All rights reserved.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,11 +23,10 @@
 #endif
 
 #import "SAViewNode.h"
-#import "SAAutoTrackUtils.h"
 #import "UIView+SAVisualProperties.h"
 #import "SACommonUtility.h"
-#import "UIView+SAElementPath.h"
-#import "UIView+AutoTrack.h"
+#import "UIView+SAVisualizedViewPath.h"
+#import "UIView+SAAutoTrack.h"
 #import "SAConstants+Private.h"
 #import "SAVisualizedUtils.h"
 #import "SAViewElementInfoFactory.h"
@@ -60,8 +59,7 @@
     self = [super initWithView:view];
     if (self) {
         /* 元素序号
-         -2：nextResponder 不是父视图或同类元素，比如 controller.view，涉及路径不带序号
-         -1：同级只存在一个同类元素，只涉及 $element_selector 不同，$element_path 照常拼接序号
+         -1：nextResponder 不是父视图或同类元素，比如 controller.view，涉及路径不带序号
          >=0：元素序号
          */
         _index = 0;
@@ -124,7 +122,7 @@
     // nextResponder 非 UIView，一般为 ViewController.view，路径拼接需要单独区分
     if (!nextResponder || ![nextResponder isKindOfClass:UIView.class]) {
         self.stopJoinPath = YES;
-        self.index = -2;
+        self.index = -1;
     }
 }
 
@@ -186,7 +184,7 @@
 
             UIResponder *nextResponder = node.view.nextResponder;
             if (!nextResponder || ![nextResponder isKindOfClass:UIView.class]) {
-                node.index = -2;
+                node.index = -1;
             }
         }
     }
@@ -237,7 +235,7 @@
 - (NSString *)elementPath {
     /* 递归  nextNode 构建 viewPath
     可以在子线程执行
-    实现参考 [SAVisualizedUtils viewSimilarPathForView: atViewController: shouldSimilarPath:]
+    实现参考 [SAVisualizedUtils viewSimilarPathForView: atViewController:]
      */
     SAViewNode *currentNode = self;
     NSMutableArray *viewPathArray = [NSMutableArray array];

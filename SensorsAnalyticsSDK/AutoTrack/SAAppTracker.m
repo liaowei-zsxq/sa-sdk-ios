@@ -3,7 +3,7 @@
 // SensorsAnalyticsSDK
 //
 // Created by wenquan on 2021/5/20.
-// Copyright © 2021 Sensors Data Co., Ltd. All rights reserved.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@
 #import "SAConstants+Private.h"
 #import "SAJSONUtil.h"
 #import "SAValidator.h"
+#import "SAAutoTrackResources.h"
 
 @implementation SAAppTracker
 
@@ -52,19 +53,21 @@
 
 - (void)trackAutoTrackEventWithProperties:(NSDictionary *)properties {
     SAAutoTrackEventObject *object = [[SAAutoTrackEventObject alloc] initWithEventId:[self eventId]];
-    [SensorsAnalyticsSDK.sharedInstance asyncTrackEventObject:object properties:properties];
+
+    [SensorsAnalyticsSDK.sharedInstance trackEventObject:object properties:properties];
 }
 
 - (void)trackPresetEventWithProperties:(NSDictionary *)properties {
     SAPresetEventObject *object  = [[SAPresetEventObject alloc] initWithEventId:[self eventId]];
-    [SensorsAnalyticsSDK.sharedInstance asyncTrackEventObject:object properties:properties];
+
+    [SensorsAnalyticsSDK.sharedInstance trackEventObject:object properties:properties];
 }
 
 - (BOOL)shouldTrackViewController:(UIViewController *)viewController {
     return YES;
 }
 
-- (void)ignoreAutoTrackViewControllers:(NSArray<NSString *> *)controllers {
+- (void)ignoreAutoTrackViewControllers:(NSArray<Class> *)controllers {
     if (controllers == nil || controllers.count == 0) {
         return;
     }
@@ -76,21 +79,12 @@
         return NO;
     }
 
-    NSString *screenName = NSStringFromClass([viewController class]);
-    return [self.ignoredViewControllers containsObject:screenName];
+    Class viewControllerClass = [viewController class];
+    return [self.ignoredViewControllers containsObject:viewControllerClass];
 }
 
 - (NSDictionary *)autoTrackViewControllerBlackList {
-    static dispatch_once_t onceToken;
-    static NSDictionary *allClasses = nil;
-    dispatch_once(&onceToken, ^{
-        NSBundle *sensorsBundle = [NSBundle bundleWithPath:[[NSBundle bundleForClass:[SensorsAnalyticsSDK class]] pathForResource:@"SensorsAnalyticsSDK" ofType:@"bundle"]];
-        //文件路径
-        NSString *jsonPath = [sensorsBundle pathForResource:@"sa_autotrack_viewcontroller_blacklist.json" ofType:nil];
-        NSData *jsonData = [NSData dataWithContentsOfFile:jsonPath];
-        allClasses = [SAJSONUtil JSONObjectWithData:jsonData];
-    });
-    return allClasses;
+    return [SAAutoTrackResources viewControllerBlacklist];
 }
 
 - (BOOL)isViewController:(UIViewController *)viewController inBlackList:(NSDictionary *)blackList {

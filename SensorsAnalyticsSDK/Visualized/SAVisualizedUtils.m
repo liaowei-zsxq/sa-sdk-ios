@@ -3,7 +3,7 @@
 // SensorsAnalyticsSDK
 //
 // Created by 储强盛 on 2020/3/3.
-// Copyright © 2020 Sensors Data Co., Ltd. All rights reserved.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,17 +24,18 @@
 
 #import "SAVisualizedUtils.h"
 #import "SAWebElementView.h"
-#import "UIView+SAElementPath.h"
-#import "UIView+SAElementSelector.h"
+#import "UIView+SAVisualizedViewPath.h"
 #import "SAVisualizedViewPathProperty.h"
 #import "SAVisualizedObjectSerializerManager.h"
 #import "SAConstants+Private.h"
 #import "SAVisualizedManager.h"
-#import "SAAutoTrackUtils.h"
-#import "UIView+AutoTrack.h"
+#import "UIView+SAAutoTrack.h"
 #import "SACommonUtility.h"
 #import "SAJavaScriptBridgeManager.h"
+#import "SAFlutterElementView.h"
 #import "SALog.h"
+#import "UIView+SAViewPath.h"
+#import "SAUIProperties.h"
 
 /// 遍历查找页面最大层数，用于判断元素是否被覆盖
 static NSInteger kSAVisualizedFindMaxPageLevel = 4;
@@ -103,7 +104,7 @@ typedef NS_ENUM(NSInteger, SARCTViewPointerEvents) {
 /// 判断一个 view 是否被覆盖
 /// @param view 当前 view
 /// @param fromView 遮挡的 view
-+ (BOOL)isCoveredForView:(UIView *)view fromView:(UIView *)fromView {
++ (BOOL)isCoveredForView:(UIView *)view fromView:(UIView *)fromView NS_EXTENSION_UNAVAILABLE("VisualizedAutoTrack not supported for iOS extensions.") {
     CGRect rect = [view convertRect:view.bounds toView:nil];
     // 视图可能超出屏幕，计算 keywindow 交集，即在屏幕显示的有效区域
     CGRect keyWindowFrame = [UIApplication sharedApplication].keyWindow.frame;
@@ -166,60 +167,14 @@ typedef NS_ENUM(NSInteger, SARCTViewPointerEvents) {
 
 #pragma mark WebElement
 + (NSArray *)analysisWebElementWithWebView:(WKWebView <SAVisualizedExtensionProperty> *)webView {
-    SAVisualizedWebPageInfo *webPageInfo = [[SAVisualizedObjectSerializerManager sharedInstance] readWebPageInfoWithWebView:webView];
-    NSArray *webElementSources = webPageInfo.webElementSources;
-    if (webElementSources.count == 0) {
+    SAVisualizedPageInfo *webPageInfo = [[SAVisualizedObjectSerializerManager sharedInstance] readWebPageInfoWithWebView:webView];
+    if (webPageInfo.pageType != SAVisualizedPageTypeWeb) {
         return nil;
     }
-    
-    // 元素去重，去除 id 相同的重复元素，并构建 model
-    NSMutableArray<NSString *> *allNoRepeatElementIds = [NSMutableArray array];
-    NSMutableArray<SAWebElementView *> *webElementArray = [NSMutableArray array];
-    
-    for (NSDictionary *pageData in webElementSources) {
-        NSString *elementId = pageData[@"id"];
-        if (elementId) {
-            if ([allNoRepeatElementIds containsObject:elementId]) {
-                continue;
-            }
-            [allNoRepeatElementIds addObject:elementId];
-        }
-        
-        SAWebElementView *webElement = [[SAWebElementView alloc] initWithWebView:webView webElementInfo:pageData];
-        if (webElement) {
-            [webElementArray addObject:webElement];
-        }
-    }
-    
-    // 根据 level 升序排序
-    [webElementArray sortUsingComparator:^NSComparisonResult(SAWebElementView *obj1,SAWebElementView *obj2) {
-        if (obj1.level > obj2.level) {
-            return NSOrderedDescending;
-        } else {
-            return NSOrderedAscending;
-        }
-    }];
-    
-    // 构建子元素数组
-    for (SAWebElementView *webElement1 in [webElementArray copy]) {
-        //当前元素是否嵌套子元素
-        if (webElement1.jsSubElementIds.count == 0) {
-            continue;
-        }
-        
-        NSMutableArray *jsSubElements = [NSMutableArray arrayWithCapacity:webElement1.jsSubElementIds.count];
-        // 根据子元素 id 查找对应子元素
-        for (SAWebElementView *webElement2 in [webElementArray copy]) {
-            // 如果 element2 是 element1 的子元素，则添加到 jsSubviews
-            if ([webElement1.jsSubElementIds containsObject:webElement2.jsElementId]) {
-                [jsSubElements addObject:webElement2];
-                [webElementArray removeObject:webElement2];
-            }
-        }
-        webElement1.jsSubviews = [jsSubElements copy];
-    }
-    return [webElementArray copy];
+
+    return [self buildVisualizedElementsWithVisualizedPageInfo:webPageInfo superView:webView];
 }
+
 
 #pragma mark RNUtils
 
@@ -320,9 +275,90 @@ typedef NS_ENUM(NSInteger, SARCTViewPointerEvents) {
     return pointerEvents;
 }
 
+#pragma mark FlutterElement
++ (NSArray *)analysisFlutterElementWithFlutterView:(UIView *)flutterView {
+    SAVisualizedPageInfo *flutterPageInfo = [[SAVisualizedObjectSerializerManager sharedInstance] queryPageInfoWithType:SAVisualizedPageTypeFlutter];
+    if (flutterPageInfo.pageType != SAVisualizedPageTypeFlutter) {
+        return nil;
+    }
+    return [self buildVisualizedElementsWithVisualizedPageInfo:flutterPageInfo superView:flutterView];
+}
+
++ (NSArray *)buildVisualizedElementsWithVisualizedPageInfo:(SAVisualizedPageInfo *)pageInfo superView:(UIView *)suerperView {
+    NSArray *elementSources = pageInfo.elementSources;
+    if (elementSources.count == 0) {
+        return nil;
+    }
+
+    // 元素去重，去除 id 相同的重复元素，并构建 model
+    NSMutableArray<NSString *> *allNoRepeatElementIds = [NSMutableArray array];
+    NSMutableArray<SAVisualizedElementView *> *webElementArray = [NSMutableArray array];
+
+    for (NSDictionary *pageData in elementSources) {
+        NSString *elementId = pageData[@"id"];
+        if (elementId) {
+            if ([allNoRepeatElementIds containsObject:elementId]) {
+                continue;
+            }
+            [allNoRepeatElementIds addObject:elementId];
+        }
+
+        SAVisualizedElementView *element = [self visualizedElementWithInfo:pageData superView:suerperView pagetype:pageInfo.pageType];
+        if (element) {
+            [webElementArray addObject:element];
+        }
+    }
+
+    // 根据 level 升序排序
+    [webElementArray sortUsingComparator:^NSComparisonResult(SAWebElementView *obj1,SAWebElementView *obj2) {
+        if (obj1.level > obj2.level) {
+            return NSOrderedDescending;
+        } else if (obj1.level == obj2.level){
+            return NSOrderedSame;
+        } else {
+            return NSOrderedAscending;
+        }
+    }];
+
+    // 构建子元素数组
+    for (SAWebElementView *webElement1 in [webElementArray copy]) {
+        //当前元素是否嵌套子元素
+        if (webElement1.subElementIds.count == 0) {
+            continue;
+        }
+
+        NSMutableArray *jsSubElements = [NSMutableArray arrayWithCapacity:webElement1.subElementIds.count];
+        // 根据子元素 id 查找对应子元素
+        for (SAWebElementView *webElement2 in [webElementArray copy]) {
+            // 如果 element2 是 element1 的子元素，则添加到 jsSubviews
+            if ([webElement1.subElementIds containsObject:webElement2.elementId]) {
+                [jsSubElements addObject:webElement2];
+                [webElementArray removeObject:webElement2];
+            }
+        }
+        webElement1.subElements = [jsSubElements copy];
+    }
+    return [webElementArray copy];
+}
+
++ (SAVisualizedElementView *)visualizedElementWithInfo:(NSDictionary *)elementInfo superView:(UIView *)superView pagetype:(SAVisualizedPageType)type {
+    if (type == SAVisualizedPageTypeWeb) {
+        if (![superView isKindOfClass:WKWebView.class]) {
+            return nil;
+        }
+        WKWebView *webView = (WKWebView *)superView;
+        return [[SAWebElementView alloc] initWithWebView:webView webElementInfo:elementInfo];
+    }
+    if (type == SAVisualizedPageTypeFlutter) {
+        return [[SAFlutterElementView alloc] initWithSuperView:superView elementInfo:elementInfo];
+    }
+    return nil;
+}
+
+
 #pragma mark keyWindow
 /// 获取当前有效的 keyWindow
-+ (UIWindow *)currentValidKeyWindow {
++ (UIWindow *)currentValidKeyWindow NS_EXTENSION_UNAVAILABLE("VisualizedAutoTrack not supported for iOS extensions.")  {
     UIWindow *keyWindow = nil;
 #if __IPHONE_OS_VERSION_MAX_ALLOWED >= 130000
     if (@available(iOS 13.0, *)) {
@@ -350,7 +386,7 @@ typedef NS_ENUM(NSInteger, SARCTViewPointerEvents) {
     return keyWindow ?: [self topWindow];
 }
 
-+ (UIWindow *)topWindow {
++ (UIWindow *)topWindow NS_EXTENSION_UNAVAILABLE("VisualizedAutoTrack not supported for iOS extensions.") {
     UIWindow *keyWindow = [UIApplication sharedApplication].keyWindow;
     NSArray<UIWindow *> *allWindows = [UIApplication sharedApplication].windows;
 
@@ -440,7 +476,7 @@ typedef NS_ENUM(NSInteger, SARCTViewPointerEvents) {
         CGSize size = view.bounds.size;
         UIGraphicsBeginImageContextWithOptions(size, NO, 0);
         CGRect rect = view.bounds;
-        //  drawViewHierarchyInRect:afterScreenUpdates: 截取一个UIView或者其子类中的内容，并且以位图的形式（bitmap）保存到UIImage中
+        // drawViewHierarchyInRect:afterScreenUpdates: 截取一个UIView或者其子类中的内容，并且以位图的形式（bitmap）保存到UIImage中
         // afterUpdates 参数表示是否在所有效果应用在视图上了以后再获取快照
         [view drawViewHierarchyInRect:rect afterScreenUpdates:NO];
         screenshotImage = UIGraphicsGetImageFromCurrentImageContext();
@@ -485,118 +521,12 @@ typedef NS_ENUM(NSInteger, SARCTViewPointerEvents) {
     return !isEnableVisualized;
 }
 
-+ (BOOL)isIgnoredItemPathWithView:(UIView *)view {
-    NSString *className = NSStringFromClass(view.class);
-    /* 类名黑名单，忽略元素相对路径
-     为了兼容不同系统、不同状态下的路径匹配，忽略区分元素的路径
-     */
-    NSArray <NSString *>*ignoredItemClassNames = @[@"UITableViewWrapperView", @"UISegment", @"_UISearchBarFieldEditor", @"UIFieldEditor"];
-    return [ignoredItemClassNames containsObject:className];
-}
-
-+ (NSArray<NSString *> *)viewPathsForViewController:(UIViewController<SAAutoTrackViewPathProperty> *)viewController {
-    NSMutableArray *viewPaths = [NSMutableArray array];
-    do {
-        [viewPaths addObject:viewController.sensorsdata_heatMapPath];
-        viewController = (UIViewController<SAAutoTrackViewPathProperty> *)viewController.parentViewController;
-    } while (viewController);
-
-    UIViewController<SAAutoTrackViewPathProperty> *vc = (UIViewController<SAAutoTrackViewPathProperty> *)viewController.presentingViewController;
-    if ([vc conformsToProtocol:@protocol(SAAutoTrackViewPathProperty)]) {
-        [viewPaths addObjectsFromArray:[self viewPathsForViewController:vc]];
-    }
-    return viewPaths;
-}
-
-+ (NSArray<NSString *> *)viewPathsForView:(UIView<SAAutoTrackViewPathProperty> *)view {
-    NSMutableArray *viewPathArray = [NSMutableArray array];
-    do { // 遍历 view 层级 路径
-        if (view.sensorsdata_heatMapPath) {
-            [viewPathArray addObject:view.sensorsdata_heatMapPath];
-        }
-    } while ((view = (id)view.nextResponder) && [view isKindOfClass:UIView.class] && ![view isKindOfClass:UIWindow.class]);
-
-    if ([view isKindOfClass:UIViewController.class] && [view conformsToProtocol:@protocol(SAAutoTrackViewPathProperty)]) {
-        // 遍历 controller 层 路径
-        [viewPathArray addObjectsFromArray:[self viewPathsForViewController:(UIViewController<SAAutoTrackViewPathProperty> *)view]];
-    }
-    return viewPathArray;
-}
-
-+ (NSString *)viewPathForView:(UIView *)view atViewController:(UIViewController *)viewController {
-    if ([self isIgnoredViewPathForViewController:viewController]) {
-        return nil;
-    }
-    NSArray *viewPaths = [[[self viewPathsForView:view] reverseObjectEnumerator] allObjects];
-    NSString *viewPath = [viewPaths componentsJoinedByString:@"/"];
-
-    return viewPath;
-}
-
 /// 获取模糊路径
-+ (NSString *)viewSimilarPathForView:(UIView *)view atViewController:(UIViewController *)viewController shouldSimilarPath:(BOOL)shouldSimilarPath {
++ (NSString *)viewSimilarPathForView:(UIView *)view atViewController:(UIViewController *)viewController {
     if ([self isIgnoredViewPathForViewController:viewController]) {
         return nil;
     }
-
-    NSMutableArray *viewPathArray = [NSMutableArray array];
-    BOOL isContainSimilarPath = NO;
-
-    do {
-        if (isContainSimilarPath || !shouldSimilarPath) { // 防止 cell 嵌套，被拼上多个 [-]
-            if (view.sensorsdata_itemPath) {
-                [viewPathArray addObject:view.sensorsdata_itemPath];
-            }
-        } else {
-            NSString *currentSimilarPath = view.sensorsdata_similarPath;
-            if (currentSimilarPath) {
-                [viewPathArray addObject:currentSimilarPath];
-                if ([currentSimilarPath rangeOfString:@"[-]"].location != NSNotFound) {
-                    isContainSimilarPath = YES;
-                }
-            }
-        }
-    } while ((view = (id)view.nextResponder) && [view isKindOfClass:UIView.class]);
-
-    if ([view isKindOfClass:UIAlertController.class]) {
-        UIViewController<SAAutoTrackViewPathProperty> *viewController = (UIViewController<SAAutoTrackViewPathProperty> *)view;
-        [viewPathArray addObject:viewController.sensorsdata_itemPath];
-    }
-
-    NSString *viewPath = [[[viewPathArray reverseObjectEnumerator] allObjects] componentsJoinedByString:@"/"];
-
-    return viewPath;
-}
-
-+ (NSString *)viewIdentifierForView:(UIView *)view {
-    NSMutableArray *valueArray = [[NSMutableArray alloc] init];
-    NSString *value = [view jjf_varE];
-    if (value) {
-        [valueArray addObject:[NSString stringWithFormat:@"jjf_varE='%@'", value]];
-    }
-    value = [view jjf_varC];
-    if (value) {
-        [valueArray addObject:[NSString stringWithFormat:@"jjf_varC='%@'", value]];
-    }
-    value = [view jjf_varB];
-    if (value) {
-        [valueArray addObject:[NSString stringWithFormat:@"jjf_varB='%@'", value]];
-    }
-    value = [view jjf_varA];
-    if (value) {
-        [valueArray addObject:[NSString stringWithFormat:@"jjf_varA='%@'", value]];
-    }
-    if (valueArray.count == 0) {
-        return nil;
-    }
-    NSString *viewVarString = [valueArray componentsJoinedByString:@" AND "];
-    return [NSString stringWithFormat:@"%@[(%@)]", NSStringFromClass([view class]), viewVarString];
-}
-
-+ (NSString *)itemHeatMapPathForResponder:(UIResponder *)responder {
-    NSString *className = NSStringFromClass(responder.class);
-    NSInteger index = [SAAutoTrackUtils itemIndexForResponder:responder];
-    return index < 0 ? className : [NSString stringWithFormat:@"%@[%ld]", className, (long)index];
+    return [SAUIProperties elementPathForView:view atViewController:viewController];
 }
 
 /// 当前 view 所在同类页面序号

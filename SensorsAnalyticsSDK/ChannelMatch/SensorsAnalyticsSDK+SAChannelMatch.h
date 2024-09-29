@@ -3,7 +3,7 @@
 // SensorsAnalyticsSDK
 //
 // Created by 张敏超🍎 on 2021/7/2.
-// Copyright © 2021 Sensors Data Co., Ltd. All rights reserved.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -123,7 +123,7 @@ NS_ASSUME_NONNULL_BEGIN
 @interface SAConfigOptions (ChannelMatch)
 
 /// 是否在手动埋点事件中自动添加渠道匹配信息
-@property (nonatomic, assign) BOOL enableAutoAddChannelCallbackEvent API_UNAVAILABLE(macos);
+@property (nonatomic, assign) BOOL enableAutoAddChannelCallbackEvent API_UNAVAILABLE(macos) NS_EXTENSION_UNAVAILABLE("ChannelMatch not supported for iOS extensions.");
 
 @end
 

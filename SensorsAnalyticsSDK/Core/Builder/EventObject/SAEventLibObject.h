@@ -3,7 +3,7 @@
 // SensorsAnalyticsSDK
 //
 // Created by yuqiang on 2021/4/6.
-// Copyright © 2021 Sensors Data Co., Ltd. All rights reserved.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,10 +19,22 @@
 //
 
 #import <Foundation/Foundation.h>
+#import "SAPropertyPlugin.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface SAEventLibObject : NSObject
+/// SDK 类型
+extern NSString * const kSAEventPresetPropertyLib;
+/// SDK 方法
+extern NSString * const kSAEventPresetPropertyLibMethod;
+/// SDK 版本
+extern NSString * const kSAEventPresetPropertyLibVersion;
+/// SDK 调用栈
+extern NSString * const kSAEventPresetPropertyLibDetail;
+/// 应用版本
+extern NSString * const kSAEventPresetPropertyAppVersion;
+
+@interface SAEventLibObject : NSObject <SAPropertyPluginLibFilter>
 
 @property (nonatomic, copy) NSString *lib;
 @property (nonatomic, copy) NSString *method;
@@ -31,6 +43,8 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, copy, nullable) NSString *detail;
 
 - (NSMutableDictionary *)jsonObject;
+
+- (instancetype)initWithH5Lib:(NSDictionary *)lib;
 
 @end
 

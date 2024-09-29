@@ -3,7 +3,7 @@
 // SensorsAnalyticsSDK
 //
 // Created by 彭远洋 on 2021/4/16.
-// Copyright © 2021 Sensors Data Co., Ltd. All rights reserved.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,9 +25,13 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface SAConfigOptions (Encrypt)
 
-/// 是否开启加密
-@property (nonatomic, assign) BOOL enableEncrypt API_UNAVAILABLE(macos);
+/// 是否开启埋点数据入库加密
+@property (nonatomic, assign) BOOL enableEncrypt API_UNAVAILABLE(macos) NS_EXTENSION_UNAVAILABLE("Encrypt not supported for iOS extensions.");
 
+/// 是否开启埋点数据上报传输加密
+@property (nonatomic, assign) BOOL enableTransportEncrypt API_UNAVAILABLE(macos) NS_EXTENSION_UNAVAILABLE("Encrypt not supported for iOS extensions.");
+
+/// 注册埋点加密插件
 - (void)registerEncryptor:(id<SAEncryptProtocol>)encryptor API_UNAVAILABLE(macos);
 
 /// 存储公钥的回调。务必保存秘钥所有字段信息

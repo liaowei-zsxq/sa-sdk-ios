@@ -1,21 +1,21 @@
 //
-//  SAURLUtils.m
-//  SensorsAnalyticsSDK
+// SAURLUtils.m
+// SensorsAnalyticsSDK
 //
-//  Created by 张敏超 on 2019/4/18.
-//  Copyright © 2015-2020 Sensors Data Co., Ltd. All rights reserved.
+// Created by 张敏超 on 2019/4/18.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
-//  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the License is distributed on an "AS IS" BASIS,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the License for the specific language governing permissions and
-//  limitations under the License.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 
 #if ! __has_feature(objc_arc)
@@ -23,6 +23,8 @@
 #endif
 
 #import "SAURLUtils.h"
+#import "SAValidator.h"
+#import "SALog.h"
 
 @implementation SAURLUtils
 
@@ -84,15 +86,15 @@
     }
 }
 
-+ (NSDictionary<NSString *, NSString *> *)decodeRueryItemsWithURL:(NSURL *)url {
++ (NSDictionary<NSString *, NSString *> *)decodeQueryItemsWithURL:(NSURL *)url {
     if (!url) {
         return nil;
     }
     NSURLComponents *components = [NSURLComponents componentsWithURL:url resolvingAgainstBaseURL:NO];
-    return [self decodeRueryItemsWithURLComponents:components];
+    return [self decodeQueryItemsWithURLComponents:components];
 }
 
-+ (NSDictionary<NSString *, NSString *> *)decodeRueryItemsWithURLComponents:(NSURLComponents *)components{
++ (NSDictionary<NSString *, NSString *> *)decodeQueryItemsWithURLComponents:(NSURLComponents *)components{
 
     if (!components) {
         return nil;
@@ -109,4 +111,24 @@
     }
 }
 
++ (NSURL *)buildServerURLWithURLString:(NSString *)urlString debugMode:(SensorsAnalyticsDebugMode)debugMode {
+    if (![SAValidator isValidString:urlString]) {
+        return nil;
+    }
+
+    NSURL *serverURL = [NSURL URLWithString:urlString];
+    // 将 Server URI Path 替换成 Debug 模式的 '/debug'
+    if (debugMode != SensorsAnalyticsDebugOff) {
+        if (serverURL.lastPathComponent.length > 0) {
+            serverURL = [serverURL URLByDeletingLastPathComponent];
+        }
+        serverURL = [serverURL URLByAppendingPathComponent:@"debug"];
+        if (serverURL.host && [serverURL.host rangeOfString:@"_"].location != NSNotFound) { //包含下划线日志提示
+            NSString *referenceURL = @"https://en.wikipedia.org/wiki/Hostname";
+            SALogWarn(@"Server url:%@ contains '_'  is not recommend,see details:%@", serverURL, referenceURL);
+        }
+    }
+
+    return serverURL;
+}
 @end

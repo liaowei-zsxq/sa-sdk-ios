@@ -3,7 +3,7 @@
 // SensorsAnalyticsSDK
 //
 // Created by 张敏超🍎 on 2020/11/20.
-// Copyright © 2020 Sensors Data Co., Ltd. All rights reserved.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface SAConfigOptions (DebugModePrivate)
 
-@property (nonatomic, assign) BOOL enableDebugMode;
+@property (nonatomic, assign) SensorsAnalyticsDebugMode debugMode;
 
 @end
 
@@ -36,7 +36,6 @@ NS_ASSUME_NONNULL_BEGIN
 
 @property (nonatomic, assign, getter=isEnable) BOOL enable;
 @property (nonatomic, strong) SAConfigOptions *configOptions;
-@property (nonatomic) SensorsAnalyticsDebugMode debugMode;
 @property (nonatomic) BOOL showDebugAlertView;
 
 @end

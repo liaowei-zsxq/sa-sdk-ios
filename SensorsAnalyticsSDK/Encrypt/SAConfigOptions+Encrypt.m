@@ -3,7 +3,7 @@
 // SensorsAnalyticsSDK
 //
 // Created by wenquan on 2021/6/26.
-// Copyright © 2021 Sensors Data Co., Ltd. All rights reserved.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,13 +23,17 @@
 #endif
 
 #import "SAConfigOptions+Encrypt.h"
+#import "SAConfigOptions+EncryptPrivate.h"
+#import "SAEncryptProtocol.h"
 
 @interface SAConfigOptions ()
 
 @property (atomic, strong, readwrite) NSMutableArray *encryptors;
 @property (nonatomic, assign) BOOL enableEncrypt;
+@property (nonatomic, assign) BOOL enableTransportEncrypt;
 @property (nonatomic, copy) void (^saveSecretKey)(SASecretKey * _Nonnull secretKey);
 @property (nonatomic, copy) SASecretKey * _Nonnull (^loadSecretKey)(void);
+@property (nonatomic, strong) id<SAEventEncryptProtocol> eventEncryptor;
 
 @end
 
@@ -37,7 +41,7 @@
 
 - (void)registerEncryptor:(id<SAEncryptProtocol>)encryptor {
     if (![self isValidEncryptor:encryptor]) {
-        NSString *format = @"\n 您使用了自定义加密插件 [ %@ ]，但是并没有实现加密协议相关方法。请正确实现自定义加密插件相关功能后再运行项目。\n";
+        NSString *format = @"\n You used a custom encryption plugin [ %@ ], but no encryption protocol related methods are implemented. Please correctly implement the related functions of the custom encryption plugin before running the project. \n";
         NSString *message = [NSString stringWithFormat:format, NSStringFromClass(encryptor.class)];
         NSAssert(NO, message);
         return;
@@ -53,6 +57,12 @@
             [encryptor respondsToSelector:@selector(asymmetricEncryptType)] &&
             [encryptor respondsToSelector:@selector(encryptEvent:)] &&
             [encryptor respondsToSelector:@selector(encryptSymmetricKeyWithPublicKey:)]);
+}
+
+- (void)registerEventEncryptor:(id<SAEventEncryptProtocol>)encryptor {
+    if([encryptor respondsToSelector:@selector(encryptEventRecord:)] && [encryptor respondsToSelector:@selector(decryptEventRecord:)]) {
+        self.eventEncryptor = encryptor;
+    }
 }
 
 @end

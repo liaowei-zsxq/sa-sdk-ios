@@ -3,7 +3,7 @@
 // SensorsAnalyticsSDK
 //
 // Created by 储强盛 on 2021/1/29.
-// Copyright © 2021 Sensors Data Co., Ltd. All rights reserved.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,8 +24,9 @@
 
 #import "SAViewNodeFactory.h"
 #import "SAVisualizedUtils.h"
-#import "SAAutoTrackUtils.h"
 #import "SAViewNode.h"
+#import "UIView+SARNView.h"
+#import "SAUIProperties.h"
 
 @implementation SAViewNodeFactory
 
@@ -41,11 +42,11 @@
     } else if ([NSStringFromClass(view.class) isEqualToString:@"UITabBarButton"]) {
         // UITabBarItem 点击事件，支持限定元素位置
         return [[SATabBarButtonNode alloc] initWithView:view];
-    } else if ([SAAutoTrackUtils isKindOfRNView:view]) {
+    } else if ([view isSensorsdataRNView]) {
         return [[SARNViewNode alloc] initWithView:view];
     } else if ([view isKindOfClass:WKWebView.class]) {
         return [[SAWKWebViewNode alloc] initWithView:view];
-    } else if ([SAVisualizedUtils isIgnoredItemPathWithView:view]) {
+    } else if ([SAUIProperties isIgnoredItemPathWithView:view]) {
         /* 忽略路径
          1. UITableViewWrapperView 为 iOS11 以下 UITableView 与 cell 之间的 view
          

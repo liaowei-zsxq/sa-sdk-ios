@@ -3,7 +3,7 @@
 // SensorsAnalyticsSDK
 //
 // Created by 陈玉国 on 2021/1/18.
-// Copyright © 2021 Sensors Data Co., Ltd. All rights reserved.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@
 #import "SAApplicationDelegateProxy.h"
 #import "SASwizzle.h"
 #import "SALog.h"
-#import "UIApplication+PushClick.h"
+#import "UIApplication+SAPushClick.h"
 #import "SensorsAnalyticsSDK+Private.h"
 #import "SAMethodHelper.h"
 #import "SAConfigOptions+AppPush.h"
@@ -53,13 +53,13 @@
     }
 }
 
-- (void)setConfigOptions:(SAConfigOptions *)configOptions {
+- (void)setConfigOptions:(SAConfigOptions *)configOptions NS_EXTENSION_UNAVAILABLE("AppPush not supported for iOS extensions.") {
     _configOptions = configOptions;
     [UIApplication sharedApplication].sensorsdata_launchOptions = configOptions.launchOptions;
     self.enable = configOptions.enableTrackPush;
 }
 
-- (void)proxyNotifications {
+- (void)proxyNotifications NS_EXTENSION_UNAVAILABLE("AppPush not supported for iOS extensions.") {
     //处理未实现代理方法也能采集事件的逻辑
     [SAMethodHelper swizzleRespondsToSelector];
     

@@ -3,7 +3,7 @@
 // SensorsAnalyticsSDK
 //
 // Created by 储强盛 on 2020/3/28.
-// Copyright © 2020 Sensors Data Co., Ltd. All rights reserved.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,20 +21,6 @@
 
 #import <Foundation/Foundation.h>
 
-#pragma mark - ViewPath
-@protocol SAAutoTrackViewPathProperty <NSObject>
-
-/// $AppClick 某个元素的相对路径，拼接 $element_selector。单个元素不包含序号
-@property (nonatomic, copy, readonly) NSString *sensorsdata_heatMapPath;
-
-@optional
-/// $AppClick 某个元素的相对路径，拼接 $element_path，单个元素包含序号
-@property (nonatomic, copy, readonly) NSString *sensorsdata_itemPath;
-
-/// 元素相似路径，可能包含 [-]
-@property (nonatomic, copy, readonly) NSString *sensorsdata_similarPath;
-@end
-
 
 #pragma mark - Visualized
 // 可视化全埋点&点击分析 上传页面信息相关协议
@@ -50,10 +36,7 @@
 /// 元素子视图
 @property (nonatomic, copy, readonly) NSArray *sensorsdata_subElements;
 
-/// 当前元素的路径
-@property (nonatomic, copy, readonly) NSString *sensorsdata_elementPath;
-
-/// 当前元素的元素选择器
+/// App 内嵌 H5 元素的元素选择器
 @property (nonatomic, copy, readonly) NSString *sensorsdata_elementSelector;
 
 /// 相对 keywindow 的坐标
@@ -70,6 +53,12 @@
 
 /// 是否为列表（本身支持限定位置，比如 Cell）
 @property (nonatomic, assign) BOOL sensorsdata_isListView;
+
+/// 元素所在平台
+///
+/// 区分不同平台的元素（ios/h5/flutter）,Flutter 和其他平台，不支持混合圈选（事件和属性元素属于不同平台），需要给予屏蔽
+@property (nonatomic, copy) NSString *sensorsdata_platform;
+
 
 @end
 

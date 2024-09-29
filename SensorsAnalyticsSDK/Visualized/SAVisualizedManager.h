@@ -3,7 +3,7 @@
 // SensorsAnalyticsSDK
 //
 // Created by 储强盛 on 2020/12/25.
-// Copyright © 2020 Sensors Data Co., Ltd. All rights reserved.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@
 #import <UIKit/UIKit.h>
 #import "SAVisualPropertiesTracker.h"
 #import "SAVisualizedEventCheck.h"
+#import "SAVisualizedConnection.h"
 
 typedef NS_ENUM(NSInteger, SensorsAnalyticsVisualizedType) {
     SensorsAnalyticsVisualizedTypeUnknown,  // 未知或不允许
@@ -50,6 +51,9 @@ NS_ASSUME_NONNULL_BEGIN
 
 /// 埋点校验
 @property (nonatomic, strong, readonly) SAVisualizedEventCheck *eventCheck;
+
+@property (nonatomic, strong, readonly) SAVisualizedConnection *visualizedConnection;
+
 
 /// 是否开启埋点校验
 - (void)enableEventCheck:(BOOL)enable;

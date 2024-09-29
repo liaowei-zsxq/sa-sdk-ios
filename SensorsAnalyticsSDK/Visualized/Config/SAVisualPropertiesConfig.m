@@ -3,7 +3,7 @@
 // SensorsAnalyticsSDK
 //
 // Created by 储强盛 on 2021/1/6.
-// Copyright © 2021 Sensors Data Co., Ltd. All rights reserved.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,11 +23,15 @@
 #endif
 
 #import "SAVisualPropertiesConfig.h"
-#import "UIView+SAElementPath.h"
+#import "UIView+SAViewPath.h"
 #import "SAVisualizedUtils.h"
-#import "UIView+AutoTrack.h"
+#import "UIView+SAAutoTrack.h"
 #import "SAValidator.h"
 #import "SAViewNode.h"
+#import "UIView+SAVisualizedViewPath.h"
+#import "UIView+SAElementContent.h"
+#import "UIView+SAElementPosition.h"
+
 
 static id dictionaryValueForKey(NSDictionary *dic, NSString *key) {
     if (![SAValidator isValidDictionary:dic]) {

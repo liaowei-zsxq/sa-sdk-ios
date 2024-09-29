@@ -33,7 +33,7 @@
 #import "SAURLUtils.h"
 #import "SANetwork.h"
 #import "SALog.h"
-#import <WebKit/WebKit.h>
+#import <WebKit/WKWebView.h>
 #import <objc/runtime.h>
 
 static NSString * const kSAJSGetAppInfoScheme = @"sensorsanalytics://getAppInfo";
@@ -167,7 +167,7 @@ static NSString * const kSAJSTrackEventNativeScheme = @"sensorsanalytics://track
     if (![self shouldHandleWebView:webView request:request]) {
         return NO;
     }
-    NSAssert([webView isKindOfClass:WKWebView.class], @"当前集成方式，请使用 WKWebView！❌");
+    NSAssert([webView isKindOfClass:WKWebView.class], @"In the current integration mode, please use WKWebView! ❌");
 
     @try {
         SALogDebug(@"showUpWebView");

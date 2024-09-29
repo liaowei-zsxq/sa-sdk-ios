@@ -3,7 +3,7 @@
 // SensorsAnalyticsSDK
 //
 // Created by 彭远洋 on 2021/4/14.
-// Copyright © 2021 Sensors Data Co., Ltd. All rights reserved.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -35,5 +35,12 @@
 /// 返回压缩后的对称密钥数据
 /// @param publicKey 非对称加密算法的公钥，用于加密对称密钥
 - (NSString *)encryptSymmetricKeyWithPublicKey:(NSString *)publicKey;
+
+@end
+
+@protocol SAEventEncryptProtocol <NSObject>
+
+- (NSString *)encryptEventRecord:(NSData *)eventRecord;
+- (NSData *)decryptEventRecord:(NSString *)eventRecord;
 
 @end

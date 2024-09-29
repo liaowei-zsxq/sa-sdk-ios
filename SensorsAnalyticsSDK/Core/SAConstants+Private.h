@@ -1,21 +1,21 @@
 //
-//  SAConstants+Private.h
-//  SensorsAnalyticsSDK
+// SAConstants+Private.h
+// SensorsAnalyticsSDK
 //
-//  Created by 储强盛 on 2019/4/8.
-//  Copyright © 2015-2020 Sensors Data Co., Ltd. All rights reserved.
+// Created by 储强盛 on 2019/4/8.
+// Copyright © 2015-2022 Sensors Data Co., Ltd. All rights reserved.
 //
-//  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the License is distributed on an "AS IS" BASIS,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the License for the specific language governing permissions and
-//  limitations under the License.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 
 #import <Foundation/Foundation.h>
@@ -29,6 +29,7 @@ extern NSString * const kSAEventTime;
 extern NSString * const kSAEventTrackId;
 extern NSString * const kSAEventName;
 extern NSString * const kSAEventDistinctId;
+extern NSString * const kSAEventOriginalId;
 extern NSString * const kSAEventProperties;
 extern NSString * const kSAEventType;
 extern NSString * const kSAEventLib;
@@ -40,10 +41,8 @@ extern NSString * const kSAEventAnonymousId;
 extern NSString * const kSAEventIdentities;
 
 #pragma mark - Item
-extern NSString * const SA_EVENT_ITEM_TYPE;
-extern NSString * const SA_EVENT_ITEM_ID;
-extern NSString * const SA_EVENT_ITEM_SET;
-extern NSString * const SA_EVENT_ITEM_DELETE;
+extern NSString * const kSAEventItemSet;
+extern NSString * const kSAEventItemDelete;
 
 #pragma mark--evnet nanme
 
@@ -72,9 +71,9 @@ extern NSString * const kSAEventNameBind;
 extern NSString * const kSAEventNameUnbind;
 
 #pragma mark--app install property
-extern NSString * const SA_EVENT_PROPERTY_APP_INSTALL_SOURCE;
-extern NSString * const SA_EVENT_PROPERTY_APP_INSTALL_DISABLE_CALLBACK;
-extern NSString * const SA_EVENT_PROPERTY_APP_INSTALL_FIRST_VISIT_TIME;
+extern NSString * const kSAEventPropertyInstallSource;
+extern NSString * const kSAEventPropertyInstallDisableCallback;
+extern NSString * const kSAEventPropertyAppInstallFirstVisitTime;
 
 #pragma mark--autoTrack property
 // App 浏览页面 Url
@@ -85,7 +84,6 @@ extern NSString * const kSAEventPropertyElementId;
 extern NSString * const kSAEventPropertyScreenName;
 extern NSString * const kSAEventPropertyTitle;
 extern NSString * const kSAEventPropertyElementPosition;
-extern NSString * const kSAEventPropertyElementSelector;
 extern NSString * const kSAEventPropertyElementPath;
 extern NSString * const kSAEventPropertyElementContent;
 extern NSString * const kSAEventPropertyElementType;
@@ -112,16 +110,12 @@ extern NSString * const kSAEventTypeBind;
 extern NSString * const kSAEventTypeUnbind;
 
 #pragma mark--profile
-extern NSString * const SA_PROFILE_SET;
-extern NSString * const SA_PROFILE_SET_ONCE;
-extern NSString * const SA_PROFILE_UNSET;
-extern NSString * const SA_PROFILE_DELETE;
-extern NSString * const SA_PROFILE_APPEND;
-extern NSString * const SA_PROFILE_INCREMENT;
-
-#pragma mark--others
-extern NSString * const SA_HAS_TRACK_INSTALLATION;
-extern NSString * const SA_HAS_TRACK_INSTALLATION_DISABLE_CALLBACK;
+extern NSString * const kSAProfileSet;
+extern NSString * const kSAProfileSetOnce;
+extern NSString * const kSAProfileUnset;
+extern NSString * const kSAProfileDelete;
+extern NSString * const kSAProfileAppend;
+extern NSString * const kSAProfileIncrement;
 
 #pragma mark - bridge name
 extern NSString * const SA_SCRIPT_MESSAGE_HANDLER_NAME;
@@ -135,6 +129,14 @@ BOOL sensorsdata_is_same_queue(dispatch_queue_t queue);
 void sensorsdata_dispatch_safe_sync(dispatch_queue_t queue,
                                     DISPATCH_NOESCAPE dispatch_block_t block);
 
+#pragma mark - Localization
+NSString* sensorsdata_localized_string(NSString* key, NSString* value);
+
+#define SALocalizedString(key) \
+        sensorsdata_localized_string((key), nil)
+#define SALocalizedStringWithDefaultValue(key, value) \
+        sensorsdata_localized_string((key), (value))
+
 #pragma mark - SF related notifications
 extern NSNotificationName const SA_TRACK_EVENT_NOTIFICATION;
 extern NSNotificationName const SA_TRACK_LOGIN_NOTIFICATION;
@@ -142,6 +144,7 @@ extern NSNotificationName const SA_TRACK_LOGOUT_NOTIFICATION;
 extern NSNotificationName const SA_TRACK_IDENTIFY_NOTIFICATION;
 extern NSNotificationName const SA_TRACK_RESETANONYMOUSID_NOTIFICATION;
 extern NSNotificationName const SA_TRACK_EVENT_H5_NOTIFICATION;
+extern NSNotificationName const SA_TRACK_Set_Server_URL_NOTIFICATION;
 
 #pragma mark - ABTest related notifications
 /// 注入打通 bridge
@@ -153,10 +156,57 @@ extern NSNotificationName const SA_H5_MESSAGE_NOTIFICATION;
 #pragma mark - SA notifications
 extern NSNotificationName const SA_REMOTE_CONFIG_MODEL_CHANGED_NOTIFICATION;
 
-extern NSNotificationName const SA_VISUALIZED_H5_MESSAGE_NOTIFICATION;
+/// 接收 App 内嵌 H5 可视化相关页面元素信息
+extern NSNotificationName const kSAVisualizedMessageFromH5Notification;
 
 // page leave
-extern NSString * const kSAPageLeaveTimestamp;
-extern NSString * const kSAPageLeaveAutoTrackProperties;
 extern NSString * const kSAEventDurationProperty;
 extern NSString * const kSAEventNameAppPageLeave;
+
+
+//event name、property key、value max length
+extern NSInteger kSAEventNameMaxLength;
+extern NSInteger kSAPropertyValueMaxLength;
+
+#pragma mark - SA Visualized
+/// H5 可视化全埋点事件标记
+extern NSString * const kSAWebVisualEventName;
+/// 内嵌 H5 可视化全埋点 App 自定义属性配置
+extern NSString * const kSAAppVisualProperties;
+/// 内嵌 H5 可视化全埋点 Web 自定义属性配置
+extern NSString * const kSAWebVisualProperties;
+
+/// is instant event
+extern NSString * const kSAInstantEventKey;
+extern NSString * const kAdsEventKey;
+
+//flush related keys
+extern NSString * const kSAEncryptRecordKeyEKey;
+extern NSString * const kSAEncryptRecordKeyPayloads;
+extern NSString * const kSAEncryptRecordKeyPayload;
+extern NSString * const kSAEncryptRecordKeyFlushTime;
+extern NSString * const kSAEncryptRecordKeyPKV;
+extern NSString * const kSAFlushBodyKeyData;
+extern NSString * const kSAFlushBodyKeyGzip;
+extern NSInteger const kSAFlushGzipCodePlainText;
+extern NSInteger const kSAFlushGzipCodeEncrypt;
+extern NSInteger const kSAFlushGzipCodeTransportEncrypt;
+
+//remote config
+extern NSString * const kSDKConfigKey;
+extern NSString * const kRequestRemoteConfigRandomTimeKey; // 保存请求远程配置的随机时间 @{@"randomTime":@double,@"startDeviceTime":@double}
+extern NSString * const kRandomTimeKey;
+extern NSString * const kStartDeviceTimeKey;
+extern NSString * const kSARemoteConfigSupportTransportEncryptKey;
+extern NSString * const kSARemoteConfigConfigsKey;
+
+//SAT Remarketing
+extern NSString * const kSAAppInteractEventTimeIntervalKey;
+extern NSString * const kSAAppInteractEventName;
+extern NSString * const kSAHasTrackInstallation;
+extern NSString * const kSAHasTrackInstallationDisableCallback;
+extern NSString * const kSAEventPropertyHasInstalledApp;
+extern NSString * const kSAEventPropertyAwakeFromDeeplink;
+
+//ID3
+extern NSString * const kSAIdentitiesAnonymousId;
